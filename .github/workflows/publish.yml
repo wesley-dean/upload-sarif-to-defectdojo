@@ -29,4 +29,4 @@ jobs:
           ghcr_username: ${{ secrets.GHUB_USERNAME }}
           github_ref: ${{ github.ref }}
           repository_name: ${{ github.event.repository.name }}
-          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
+          platforms: linux/amd64,linux/arm/v7
