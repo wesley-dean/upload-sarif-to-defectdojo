@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # pin@v3
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # pin@v3
 
       - name: Build and Publish Image
-        uses: wesley-dean/publish_container@946045c57bb0ddff06ccfda854b388f60b0d6ac6 # pin@v1.0.10
+        uses: wesley-dean/publish_container@b2d28ac96e6e46b81e00a58803c643ad64f2236b # pin@v1.0.11
         with:
           dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
           dockerhub_token: ${{ secrets.DOCKERHUB_PAT }}
