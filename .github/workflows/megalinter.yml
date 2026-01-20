@@ -45,7 +45,7 @@ jobs:
         id: ml
         # You can override MegaLinter flavor used to have faster performances
         # More info at https://megalinter.github.io/flavors/
-        uses: oxsecurity/megalinter/flavors/ci_light@55a59b24a441e0e1943080d4a512d827710d4a9d # pin@v9.2.0
+        uses: oxsecurity/megalinter/flavors/ci_light@42bb470545e359597e7f12156947c436e4e3fb9a # pin@v9.3.0
         env:
           # All available variables are described in documentation
           # https://megalinter.github.io/configuration/
@@ -101,6 +101,6 @@ jobs:
 
       - name: Upload MegaLinter scan results to GitHub Security tab
         if: steps.sarif_file_exists.outputs.files_exists == 'true'
-        uses: github/codeql-action/upload-sarif@5d4e8d1aca955e8d8589aabd499c5cae939e33c7 # pin@v2
+        uses: github/codeql-action/upload-sarif@cdefb33c0f6224e58673d9004f47f7cb3e328b89 # pin@v2
         with:
           sarif_file: "megalinter-reports/megalinter-report.sarif"
