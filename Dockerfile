@@ -14,8 +14,8 @@ RUN apk add --no-cache \
 && ( getent passwd "${RUNNER}" || adduser -D "${RUNNER}" )
 
 COPY ./upload_sarif_to_defectdojo.bash /
-ENTRYPOINT ["/upload_sarif_to_defectdojo.bash"]
 
 HEALTHCHECK NONE
 
 USER "${RUNNER}"
+ENTRYPOINT ["/upload_sarif_to_defectdojo.bash"]
