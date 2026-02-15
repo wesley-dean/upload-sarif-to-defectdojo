@@ -1,8 +1,8 @@
 # Upload Sarif results to Defect Dojo
 
-[![MegaLinter](https://github.com/wesley-dean-flexion/upload-sarif-to-defectdojo/actions/workflows/megalinter.yml/badge.svg)](https://github.com/wesley-dean-flexion/upload-sarif-to-defectdojo/actions/workflows/megalinter.yml)
-[![Test](https://github.com/wesley-dean-flexion/upload-sarif-to-defectdojo/actions/workflows/test.yml/badge.svg)](https://github.com/wesley-dean-flexion/upload-sarif-to-defectdojo/actions/workflows/test.yml)
-[![Publish](https://github.com/wesley-dean-flexion/upload-sarif-to-defectdojo/actions/workflows/publish.yml/badge.svg)](https://github.com/wesley-dean-flexion/upload-sarif-to-defectdojo/actions/workflows/publish.yml)
+[![MegaLinter](https://github.com/wesley-dean/upload-sarif-to-defectdojo/actions/workflows/megalinter.yml/badge.svg)](https://github.com/wesley-dean/upload-sarif-to-defectdojo/actions/workflows/megalinter.yml)
+[![Test](https://github.com/wesley-dean/upload-sarif-to-defectdojo/actions/workflows/test.yml/badge.svg)](https://github.com/wesley-dean/upload-sarif-to-defectdojo/actions/workflows/test.yml)
+[![Publish](https://github.com/wesley-dean/upload-sarif-to-defectdojo/actions/workflows/publish.yml/badge.svg)](https://github.com/wesley-dean/upload-sarif-to-defectdojo/actions/workflows/publish.yml)
 
 ## Quickstart
 
@@ -12,7 +12,7 @@ This should get you started:
 export DD_TOKEN="${DEFECT_DOJO_AUTH_TOKEN}"
 curl -s \
   -o './upload_sarif_to_defectdojo.bash' \
-  -L 'https://raw.githubusercontent.com/wesley-dean-flexion/upload-sarif-to-defectdojo/main/upload_sarif_to_defectdojo.bash'
+  -L 'https://raw.githubusercontent.com/wesley-dean/upload-sarif-to-defectdojo/main/upload_sarif_to_defectdojo.bash'
 ./upload_sarif_to_defectdojo.bash \
   -p "${PRODUCT}" \
   -e "${ENGAGEMENT}" \
@@ -22,9 +22,9 @@ curl -s \
 
 The script can be...
 
-* downloaded at runtime ([raw script link](https://raw.githubusercontent.com/wesley-dean-flexion/upload-sarif-to-defectdojo/main/upload_sarif_to_defectdojo.bash))
-* pulled from [GHCR](https://github.com/wesley-dean-flexion/upload-sarif-to-defectdojo/pkgs/container/upload-sarif-to-defectdojo)
-* pulled from [DockerHub](https://hub.docker.com/r/wesleydeanflexion/upload-sarif-to-defectdojo)
+* downloaded at runtime ([raw script link](https://raw.githubusercontent.com/wesley-dean/upload-sarif-to-defectdojo/main/upload_sarif_to_defectdojo.bash))
+* pulled from [GHCR](https://github.com/wesley-dean/upload-sarif-to-defectdojo/pkgs/container/upload-sarif-to-defectdojo)
+* pulled from [DockerHub](https://hub.docker.com/r/wesleydeanf/upload-sarif-to-defectdojo)
 
 ## Overview
 
@@ -134,7 +134,7 @@ docker run \
   -it -v "$PWD:$PWD" \
   -w "$PWD" \
   -u "$UID" \
-  ghrc.io/wesley-dean-flexion/upload-sarif-to-defectdojo \
+  ghrc.io/wesley-dean/upload-sarif-to-defectdojo \
   megalinter-reports/sarif/*.sarif
 ```
 
