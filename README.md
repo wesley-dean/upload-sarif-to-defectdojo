@@ -122,7 +122,7 @@ has been provided to simplify running it.
 
 ```bash
 docker build
-  -t ghcr.io/wesley-dean-flexion/upload-sarif-to-defectdojo
+  -t ghcr.io/wesley-dean/upload-sarif-to-defectdojo
   .
 ```
 
