@@ -1,0 +1,27 @@
+---
+name: "Close stale issues and PRs"
+
+# yamllint disable-line rule:truthy
+on:
+  schedule:
+    - cron: "34 1 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  stale:
+    permissions:
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/stale@997185467fa4f803885201cee163a9f38240193d # pin@v9
+        with:
+          stale-issue-message: "This issue is stale because it has been open 180 days with no activity. Remove stale label or comment or this will be closed in 21 days."
+          days-before-stale: 180
+          days-before-close: 21

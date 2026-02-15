@@ -1,0 +1,53 @@
+---
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+name: Versioning
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.ref }}-${{ github.workflow }}"
+  cancel-in-progress: true
+
+jobs:
+  versioning:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # pin@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: calculate version
+        id: calculate-version
+        uses: bitshifted/git-auto-semver@c4e8f005e839f822325356f141939cf6c76b5701 # pin@v1
+        with:
+          create_tag: true
+          initial_version: 0.0.1
+          tag_prefix: v
+
+      - name: Generate release notes
+        id: release-notes
+        uses: RedCrafter07/release-notes-action@31674bfa3a219e7c661fc0c5b7b3851c741b9965 # pin@v1.0.1
+        with:
+          tag-name: "v${{ steps.calculate-version.outputs.version-string }}"
+          token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Create release
+        id: create-release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # pin@v2.5.0
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          name: "v${{ steps.calculate-version.outputs.version-string }}"
+          body: "${{ steps.release-notes.outputs.release-notes }}"
+          tag_name: "v${{ steps.calculate-version.outputs.version-string }}"
+          draft: false
+          prerelease: false

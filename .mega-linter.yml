@@ -1,48 +1,63 @@
 ---
-# don't test the reports Mega-Linter created, docs, or test files
-ADDITIONAL_EXCLUDED_DIRECTORIES:
-  [report, megalinter-reports, docs, test, tests, venv]
-
-# don't lint test files or documentation
-FILTER_REGEX_EXCLUDE: (.venv/|/test/|\.test\.|_test\.|/docs/|/index.html|.github/.*\.html)
+# don't use Mega-Linter to test the reports Mega-Linter created
+ADDITIONAL_EXCLUDED_DIRECTORIES: [report, megalinter-reports, .git, site, tests]
 
 # don't scan files listed in .gitignore (e.g., node_modules)
 IGNORE_GITIGNORED_FILES: true
 
-# attempt to apply fixes at this time
-APPLY_FIXES: "all"
-
-# Disable devskim as it's reporting an error with no log message
+# Disable several linters:
+#  - devskim: it's reporting an error with no log message
+#  - dustilock: it can't parse requirements.txt files with long lines (hashes)
+#  - proselint: it may or may not be helpful, especially for POC work
+#  - copypaste_jscpd: it's a little touchy and may not be helpful
+#  - bash-exec: some .bash files don't need to be executable
+#  - lychee: markdown-link-check gives us this functionality
 DISABLE_LINTERS:
   [
     REPOSITORY_DEVSKIM,
-    SPELL_MISSPELL,
-    SPELL_CSPELL,
+    REPOSITORY_DUSTILOCK,
     SPELL_PROSELINT,
     COPYPASTE_JSCPD,
     BASH_EXEC,
+    SPELL_LYCHEE,
   ]
 
-# only scan new / updated files, not everything
-VALIDATE_ALL_CODEBASE: true
+# scan only new / updated files, not everything
+VALIDATE_ALL_CODEBASE: false
 
 # don't print the alpaca -- it's cute, but we don't need it in the logs
 PRINT_ALPACA: false
 
-# write a SARIF file
-SARIF_REPORTER: true
-
-# don't fail on finding (yet)
+# don't fail on finding errors; we want to see the results, not stop the build
 DISABLE_ERRORS: true
 
 # use prettier for JavaScript code formatting
 JAVASCRIPT_DEFAULT_STYLE: prettier
 
+# MegaLinter v6 supports SARIF reporters; if GitHub Advanced Security is not
+# available, this may need to be set to false so that GitHub doesn't complain
+# and fail the workflow.
+SARIF_REPORTER: true
+
 # only scan the files in This commit, not the entire history of the repo
 REPOSITORY_GITLEAKS_ARGUMENTS: --no-git
 
-# don't lint the generated code in the docs/ directory
-REPOSITORY_DEVSKIM_ARGUMENTS: "--skip-git-ignored-files"
+# don't scan the .git directory GitHub creates at runtime
+REPOSITORY_TRUFFLEHOG_ARGUMENTS: "--exclude-paths=.trufflehogignore"
+
+# make sure Terraform modules are present
+REPOSITORY_CHECKOV_ARGUMENTS: "--download-external-modules true"
+
+# make sure Common Platform Enumerations (CPEs) are present
+REPOSITORY_GRYPE_ARGUMENTS: "--add-cpes-if-none"
+
+# make sure that MegaLinter's reports folder is clean at the start of each
+# run so that tools like DefectDojo don't get confused by old reports
+CLEAR_REPORT_FOLDER: true
+
+# don't check the libs, tests, vendor, or examples directories for
+# non-executable bash files
+BASH_EXEC_FILTER_REGEX_EXCLUDE: "(libs?|tests?|examples?|vendor)"
 
 # shfmt will..
 #   - use multiples of 2 spaces for indenting
@@ -51,5 +66,3 @@ REPOSITORY_DEVSKIM_ARGUMENTS: "--skip-git-ignored-files"
 #   - place spaces around redirections
 #   - keep column alignment padding
 BASH_SHFMT_ARGUMENTS: -i 2 -bn -ci -sr -kp
-
-REPOSITORY_TRUFFLEHOG_ARGUMENTS: "--exclude-paths=.trufflehogignore"
