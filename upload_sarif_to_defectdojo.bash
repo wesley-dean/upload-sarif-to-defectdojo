@@ -47,6 +47,83 @@
 
 set -euo pipefail
 
+## @fn command_exists()
+## @brief Determine whether a command is available in PATH.
+## @details
+## This helper provides a consistent and readable mechanism for probing
+## runtime dependencies.  Minimal container images and BusyBox-based systems
+## frequently omit commands that are assumed present on full distributions.
+##
+## This function performs a simple PATH lookup and does not attempt to
+## validate version, permissions, or behavior.  It is intentionally small
+## and side-effect free so that it can be safely used inside other
+## dependency checks.
+## @param cmd The command name to check for in PATH.
+## @returns No output is written to STDOUT.
+## @retval 0 The command exists and is executable.
+## @retval 1 The command is not found in PATH.
+##
+## @par Examples
+## @code
+## if command_exists aws ; then
+##   logger -s -p authpriv.info -t "$0" "aws CLI detected"
+## fi
+## @endcode
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+
+## @fn log_message()
+## @brief Write a structured log message with logger fallback support.
+## @details
+## This helper centralizes all operational logging for the script.
+## The script frequently runs in sshd's AuthorizedKeysCommand context,
+## where writing to STDOUT would interfere with key delivery and cause
+## authentication failure.  Therefore, all logging must go to syslog
+## or STDERR only.
+##
+## When the logger(1) command is available, this function emits the
+## message using logger with the provided syslog priority.  When logger
+## is unavailable (for example, in minimal BusyBox environments), the
+## message is written to STDERR instead.
+##
+## This design ensures that:
+## - missing logger does not suppress critical diagnostics,
+## - dependency_probe() remains useful even in constrained images,
+## - and no logging path contaminates STDOUT.
+##
+## This function does not perform formatting beyond simple message
+## forwarding.  Callers are responsible for composing meaningful,
+## operator-friendly messages.
+##
+## @param priority The syslog priority (for example: authpriv.info).
+## @param message The message string to log.
+## @returns No output is written to STDOUT.
+## @retval 0 Message delivery attempted via logger or STDERR.
+##
+## @par Examples
+## @code
+## log_message "authpriv.info" \
+##   "Dependency probe completed successfully."
+##
+## log_message "authpriv.warning" \
+##   "Dependency missing: aws CLI not found."
+## @endcode
+log_message() {
+  local priority="$1"
+  shift
+  local message="$*"
+
+  if command_exists logger ; then
+    logger -s -p "$priority" -t "$0" "$message"
+  else
+    echo "$message" >&2
+  fi
+
+  return 0
+}
+
 ## @fn is_git_repository()
 ## @brief determine if a file is in a git-associated file structure
 ## @details
@@ -66,13 +143,16 @@ set -euo pipefail
 ## if is_git_repository "megalinter-reports/sarif/REPOSITORY_KICS.sarif" ; then
 ## @endcode
 is_git_repository() {
-  directory="$(dirname "${1:-.}")"
+  ## If git is not available, this host cannot perform repository introspection.
+  ## Returning non-zero allows callers to degrade gracefully under `set -euo pipefail`.
+  command_exists git || return 1
 
-  ( 
-    cd "$directory" || exit 1
-    git rev-parse --quiet > /dev/null 2>&1
-  )
+  local target_dir
+  target_dir="${1:-.}"
+
+  git -C "$target_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1
 }
+
 
 ## @fn git_branch()
 ## @brief determine the current branch of a git repository
@@ -81,23 +161,92 @@ is_git_repository() {
 ## where a specified file lives.  Unlike `git rev-parse`,
 ## we can't provide a `--prefix` so we're just going to
 ## `cd` there and run `git branch`.
+##
+## CI systems commonly check out repositories in a detached HEAD state.
+## In that situation `git branch --show-current` returns an empty string.
+## An empty branch value is unhelpful when associating findings with a
+## specific build, so we fall back to a stable identifier:
+##
+## 1. Prefer the symbolic branch name if available.
+## 2. Fall back to `git rev-parse --abbrev-ref HEAD` when it resolves to
+##    something other than `HEAD`.
+## 3. Fall back to the short commit SHA when the repository is detached.
 ## @param filename the file to use as a basis for searching
 ## @retval 0 (True) if a branch could be determined
 ## @retval 1 (False) if a branch could not be determined
-## @returns the current branch of the repository
+## @returns the current branch of the repository, or a short commit SHA in
+## detached HEAD scenarios
 ## @par Examples
 ## @code
 ## filename=~/src/projecta
 ## echo "The current branch for '$filename' is '$(git_branch "$filename")'"
 ## @endcode
 git_branch() {
-  directory="$(dirname "${1:-.}")"
+  ## If git is not available or the directory is not a repository, signal failure cleanly.
+  command_exists git || return 1
 
-  ( 
-    cd "$directory" || exit 1
-    git branch --show-current
-  )
+  local target_dir branch sha
+  target_dir="${1:-.}"
+
+  is_git_repository "$target_dir" || return 1
+
+  ## `git branch --show-current` returns an empty string for detached HEAD (common in CI).
+  branch="$(git -C "$target_dir" branch --show-current 2>/dev/null || true)"
+  if [ -n "$branch" ]; then
+    printf '%s\n' "$branch"
+    return 0
+  fi
+
+  ## When detached, `--abbrev-ref HEAD` returns the literal string `HEAD`.
+  branch="$(git -C "$target_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [ -n "$branch" ] && [ "$branch" != 'HEAD' ]; then
+    printf '%s\n' "$branch"
+    return 0
+  fi
+
+  ## Final fallback: a short commit SHA is always meaningful and stable.
+  sha="$(git -C "$target_dir" rev-parse --short HEAD 2>/dev/null || true)"
+  [ -n "$sha" ] || return 1
+  printf '%s\n' "$sha"
 }
+
+
+## @fn git_repository_root()
+## @brief determine the top-level directory of a git repository
+## @details
+## This returns the absolute path to the root of the git working tree that
+## contains the provided filename.  The filename itself does not need to be
+## tracked or staged.  The only requirement is that the filename lives
+## somewhere underneath a git working tree.
+##
+## This is intentionally implemented relative to the file's directory rather
+## than the current working directory so the script behaves deterministically
+## in CI/CD environments where invocation paths can vary.
+## @param filename the file to use as a basis for searching
+## @retval 0 (True) if the repository root could be determined
+## @retval 1 (False) if the repository root could not be determined
+## @returns the absolute path to the repository root via STDOUT
+## @par Examples
+## @code
+## repo_root="$(git_repository_root "megalinter-reports/sarif/REPOSITORY_KICS.sarif")"
+## test -e "${repo_root}/uploadsarifdd.conf"
+## @endcode
+git_repository_root() {
+  ## If git is not available, the caller cannot infer repository-root configuration paths.
+  command_exists git || return 1
+
+  local filename target_dir repo_root
+  filename="${1:-.}"
+  target_dir="$(dirname -- "$filename")"
+
+  is_git_repository "$target_dir" || return 1
+
+  repo_root="$(git -C "$target_dir" rev-parse --show-toplevel 2>/dev/null || true)"
+  [ -n "$repo_root" ] || return 1
+  printf '%s\n' "$repo_root"
+}
+
+
 
 ## @fn get_scan_type()
 ## @brief determine the scan type based on a filename
@@ -124,11 +273,12 @@ get_scan_type() {
       echo "SARIF"
       ;;
     *)
-      echo "Unable to determine scan type" 1>&2
+      log_message ERROR "Unable to determine scan type"
       exit 1
       ;;
   esac
 }
+
 
 ## @fn get_mime_type()
 ## @brief determine a file's MIME type based on a filename
@@ -208,14 +358,19 @@ get_scan_date() {
 ## remote_url="$(get_scm_url "/path/to/repo")"
 ## @endcode
 get_scm_url() {
-  directory="$(dirname "${1:-.}")"
-  origin="${2:-origin}"
+  ## If git is not available or the directory is not a repository, return non-zero without exiting the script.
+  command_exists git || return 1
 
-  ( 
-    cd "$directory" || exit 1
-    git remote get-url --push "$origin" | sed -Ee 's|://[^@]*@|://|' -Ee 's|\.git$||'
-  )
+  local target_dir url
+  target_dir="${1:-.}"
+
+  is_git_repository "$target_dir" || return 1
+
+  url="$(git -C "$target_dir" config --get remote.origin.url 2>/dev/null || true)"
+  [ -n "$url" ] || return 1
+  printf '%s\n' "$url"
 }
+
 
 ## @fn get_commit_hash()
 ## @brief get the current full commit hash for a repository
@@ -232,13 +387,20 @@ get_scm_url() {
 ## commit_hash="$(get_commit_hash "/path/to/repo")"
 ## @endcode
 get_commit_hash() {
-  directory="$(dirname "${1:-.}")"
+  ## If git is not available or the directory is not a repository, return non-zero without exiting the script.
+  command_exists git || return 1
 
-  ( 
-    cd "$directory" || exit 1
-    git log -n1 --pretty=format:"%H"
-  )
+  local target_dir commit
+  target_dir="${1:-.}"
+
+  is_git_repository "$target_dir" || return 1
+
+  commit="$(git -C "$target_dir" rev-parse HEAD 2>/dev/null || true)"
+  [ -n "$commit" ] || return 1
+  printf '%s\n' "$commit"
 }
+
+
 
 ## @fn die
 ## @brief receive a trapped error and display helpful debugging details
@@ -266,6 +428,7 @@ die() {
   done
   exit 1
 }
+
 
 ## @fn display_usage
 ## @brief display some auto-generated usage information
@@ -310,7 +473,7 @@ display_usage() {
 
   local usage
   usage="$(
-    ( 
+    (
       sed -Ene "s/^[[:space:]]*(['\"])([[:alnum:]]*)\1[[:space:]]*\).*##-[[:space:]]*(.*)/\-\2\t\t: \3/p" < "$0"
       sed -Ene "s/^[[:space:]]*(['\"])([-[:alnum:]]*)*\1[[:space:]]*\)[[:space:]]*set[[:space:]]*--[[:space:]]*(['\"])[@$]*\3[[:space:]]*(['\"])(-[[:alnum:]])\4.*##-[[:space:]]*(.*)/\2\t\t: \6/p" < "$0"
     ) | sort --ignore-case
@@ -324,6 +487,53 @@ display_usage() {
     printf "\nUsage:\n%s\n" "$usage"
   fi
 }
+
+
+## @fn print_curl_command_redacted()
+## @brief print a redacted, shell-escaped curl command for diagnostics
+## @details
+## This function prints a curl command in a copy/paste-friendly format,
+## while redacting secrets that would otherwise leak into logs.
+##
+## The script uses this in `--dryrun` mode to show operators what would
+## be executed without performing any network I/O.
+##
+## Redaction behavior is intentionally conservative:
+## - Only the DefectDojo API token in the Authorization header is masked.
+## - The remainder of the command is preserved verbatim so that quoting,
+##   multipart form fields, and endpoint details remain debuggable.
+##
+## @param command_name  the name of an array variable holding the curl command
+## @retval 0 always
+## @par Examples
+## @code
+## curl_command=(curl -X POST https://dojo.example/api/v2/import-scan/ -H "Authorization: Token secret")
+## print_curl_command_redacted curl_command
+## @endcode
+print_curl_command_redacted() {
+  local -n command_ref="$1"
+
+  local -a redacted_command=()
+  local argument
+
+  for argument in "${command_ref[@]}"; do
+    if [[ "$argument" == Authorization:\ Token\ * ]]; then
+      redacted_command+=("Authorization: Token REDACTED")
+      continue
+    fi
+
+    redacted_command+=("$argument")
+  done
+
+  printf '%s
+' "Dry run (redacted):" 1>&2
+  printf '%q ' "${redacted_command[@]}" 1>&2
+  printf '
+' 1>&2
+
+  return 0
+}
+
 
 ## @fn main()
 ## @brief This is the main program loop.
@@ -339,6 +549,8 @@ main() {
   declare -a form_values
 
   METHOD="${METHOD:-POST}"
+
+  DRYRUN="${DRYRUN:-0}"
 
   for arg in "$@"; do
     shift
@@ -365,7 +577,7 @@ main() {
       'b') DD_BRANCH="$OPTARG" ;; ##- set the branch to report
       'c') configuration_sources+=("$OPTARG") ;; ##- specify a configuration file
       'd') DD_SCAN_DATE="$OPTARG" ;; ##- set the scan date
-      'D') METHOD="--head" ;; ##- show curl command but don't send it
+      'D') DRYRUN="1" ;; ##- show curl command but don't send it
       'e') DD_ENGAGEMENT="$OPTARG" ;; ##- set the engagement
       'h')
            display_usage
@@ -388,8 +600,27 @@ main() {
   shift "$((OPTIND - 1))"
 
   for filename in "$@"; do
+
+    ## If the file does not exist, we need to distinguish between:
+    ##   (1) a caller-supplied explicit path that is genuinely missing 
+    ##     (hard error), and
+    ##   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
+    ##     literally (no work to do).
     if [ ! -e "$filename" ]; then
-      break
+      if [[ "$filename" == *[\*\?\[]* ]]; then
+        log_message INFO "No files matched pattern: $filename"
+        continue
+      fi
+
+      log_message ERROR "file not found: $filename"
+      exit 1
+    fi
+
+    ## A path that exists but is not a regular file is not a valid upload target.
+    ## This includes directories, devices, FIFOs, and other special files.
+    if [ ! -f "$filename" ]; then
+      log_message ERROR "not a regular file: $filename"
+      exit 1
     fi
     form_values=()
 
@@ -399,8 +630,10 @@ main() {
     )
 
     if is_git_repository "$filename"; then
-      configuration_sources+=("$(git rev-parse --show-toplevel --prefix "$filename")/uploadsarifdd.conf")
-      configuration_sources+=("$(git rev-parse --show-toplevel --prefix "$filename")/.uploadsarifdd.conf")
+      repo_root="$(git_repository_root "$filename")"
+
+      configuration_sources+=("${repo_root}/uploadsarifdd.conf")
+      configuration_sources+=("${repo_root}/.uploadsarifdd.conf")
     fi
 
     configuration_sources+=("${HOME}/uploadsarifdd.conf")
@@ -420,17 +653,17 @@ main() {
     done
 
     if [ -z "${DD_TOKEN:-}" ]; then
-      echo "No value for DD_TOKEN provided" 1>&2
+      log_message ERROR "No value for DD_TOKEN provided"
       exit 1
     fi
 
     if [ -z "$DD_PRODUCT" ]; then
-      echo "No value for DD_PRODUCT provided" 1>&2
+      log_message ERROR "No value for DD_PRODUCT provided"
       exit 1
     fi
 
     if [ -z "$DD_SERVER_HOST" ]; then
-      echo "No value for DD_SERVER_HOST provided" 1>&1
+      log_message ERROR "No value for DD_SERVER_HOST provided"
       exit 1
     fi
 
@@ -463,13 +696,21 @@ main() {
       || [ -n "${DD_SCM_URL:-}" ]; then
       form_values+=("source_code_management_uri=${DD_SCM_URL:-$(get_scm_url "$filename")}")
     fi
-
-    curl -X "$METHOD" \
-      "${DD_SERVER_PROTO:-https}://${DD_SERVER_HOST}${DD_SERVER_PATH:-/api/v2/import-scan/}" \
-      -H "accept: application/json" \
-      -H "Content-Type: multipart/form-data" \
-      -H "Authorization: Token ${DD_TOKEN}" \
+    curl_command=(
+      curl
+      -X "$METHOD"
+      "${DD_SERVER_PROTO:-https}://${DD_SERVER_HOST}${DD_SERVER_PATH:-/api/v2/import-scan/}"
+      -H "accept: application/json"
+      -H "Authorization: Token ${DD_TOKEN}"
       "${form_values[@]/#/-F }"
+    )
+
+    if [ "$DRYRUN" = "1" ]; then
+      print_curl_command_redacted curl_command
+      continue
+    fi
+
+    "${curl_command[@]}"
   done
 }
 

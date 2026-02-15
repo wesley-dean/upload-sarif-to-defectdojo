@@ -77,6 +77,19 @@ Future plans may include specifying the configuration via
 CLI flag, supporting additional scan types, and/or additional
 fields from DefectDojo's import-scan endpoint.
 
+
+
+### Glob Behavior
+
+When passing patterns such as `*.sarif`, the script distinguishes between
+an unmatched glob and a missing explicit filename.
+
+If a glob pattern matches no files, the script treats this as a successful
+no-op (there were no SARIF files to upload).
+
+If an explicitly named file does not exist, the script exits with an error.
+
+
 ### Examples
 
 ```bash
@@ -142,7 +155,7 @@ it must be passed via environment variable or configuration file.
 
 ### DD_PRODUCT
 
-`DD_PRODCT` is name of the product in DefectDojo (required)
+`DD_PRODUCT` is name of the product in DefectDojo (required)
 
 **DD_PRODUCT is required!!***
 
@@ -168,7 +181,7 @@ Set via CLI with `-s` or `--server`
 
 ### DD_SERVER_PATH
 
-`SS_SERVER_PATH` is path on the server to the import-scan API endpoint
+`DD_SERVER_PATH` is path on the server to the import-scan API endpoint
 
 The default is `/api/v2/import-scan/` which is the standard when
 DefectDojo runs at the root of the server (i.e., `dojo.example.com`)
@@ -195,7 +208,7 @@ The default value is 'Info'; values may be:
 * Low
 * Medium
 * High
-* Critica
+* Critical
 
 ### DD_ACTIVE
 
@@ -213,7 +226,7 @@ The default value is 'true'
 
 `DD_SCAN_TYPE` is the type of scan results to be imported
 
-Set via CLI with `-t` or --scan-type`
+Set via CLI with `-t` or `--scan-type`
 
 The default value is determined by the file's extension
 
@@ -239,7 +252,7 @@ The default value is 'false'
 
 `DD_FILE_TYPE` is the MIME type for the file to be uploaded
 
-Set via CLI with `-m` or `--mime`
+Set via CLI with `-m` or `--mime-type
 
 The default value is determined by the file's extension
 
@@ -265,3 +278,13 @@ This is optional and the default value is determined using `git remote`.
 Please be aware that some SCM URLs may include encoded credentials; the
 default is filtered to remove such credentials (and any `.git` on the
 end of the URL).
+
+## Security Note
+
+Configuration files are sourced as executable shell code. This means that
+any commands contained in those files will be executed in the context of
+this script.
+
+Only use configuration files from repositories or environments that you
+trust. Do not source configuration files from untrusted pull requests,
+forks, or external contributions without review.
