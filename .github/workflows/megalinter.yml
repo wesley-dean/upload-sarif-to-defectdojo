@@ -214,7 +214,7 @@ jobs:
       # first.
       - name: Check to see if the SARIF a was generated
         id: sarif_file_exists
-        uses: andstor/file-existence-action@076e0072799f4942c8bc574a82233e1e4d13e9d6 # pin@v3.0.0
+        uses: andstor/file-existence-action@558493d6c74bf472d87c84eab196434afc2fa029 # pin@v3.1.0
         with:
           files: "megalinter-reports/megalinter-report.sarif"
 
@@ -228,6 +228,6 @@ jobs:
         if: |
           steps.sarif_file_exists.outputs.files_exists == 'true'
           && github.event.repository.visibility == 'public'
-        uses: github/codeql-action/upload-sarif@38697555549f1db7851b81482ff19f1fa5c4fedc # pin@v3.29.5
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # pin@v3.29.5
         with:
           sarif_file: "megalinter-reports/megalinter-report.sarif"
