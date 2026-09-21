@@ -31,7 +31,7 @@ BASH_DOXYGEN := $(VENDOR_DIR)/doxygen-bash.awk
 DOCS_OUTPUT := doc/reference
 
 VERSION ?= 0.0.0-dev
-BUILD_COMMIT ?= $(shell commit="$(git rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')"; if git rev-parse --is-inside-work-tree >/dev/null 2>&1 && [[ -n "$(git status --porcelain --untracked-files=normal -- Makefile dependencies.txt src 2>/dev/null)" ]]; then printf '%s-dirty' "$commit"; else printf '%s' "$commit"; fi)
+BUILD_COMMIT ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')
 BUILD_DATE ?= $(shell git show -s --format=%cI HEAD 2>/dev/null || printf 'unknown')
 COMPAT_VERSION := 0.0.0-dev
 COMPAT_BUILD_DATE := unknown
@@ -261,8 +261,8 @@ format-check:
 
 test: build
 	@set -e; for artifact in $(DIST_SCRIPTS); do \
-		printf 'Testing %s\n' "$artifact"; \
-		UPLOAD_SARIF_ARTIFACT="$(pwd)/$artifact" bats tests; \
+		printf 'Testing %s\n' "$$artifact"; \
+		UPLOAD_SARIF_ARTIFACT="$$(pwd)/$$artifact" bats tests; \
 	done
 
 clean: docs-clean
