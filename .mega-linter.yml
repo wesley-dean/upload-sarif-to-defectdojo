@@ -22,18 +22,17 @@ DISABLE_LINTERS:
     COPYPASTE_JSCPD,
     BASH_EXEC,
     SPELL_LYCHEE,
-    REPOSITORY_GITLEAKS,
     REPOSITORY_OSV_SCANNER,
   ]
 
 # scan only new / updated files, not everything
-VALIDATE_ALL_CODEBASE: false
+VALIDATE_ALL_CODEBASE: true
 
 # don't print the alpaca -- it's cute, but we don't need it in the logs
 PRINT_ALPACA: false
 
 # don't fail on finding errors; we want to see the results, not stop the build
-DISABLE_ERRORS: true
+DISABLE_ERRORS: false
 
 # use prettier for JavaScript code formatting
 JAVASCRIPT_DEFAULT_STYLE: prettier
@@ -42,9 +41,6 @@ JAVASCRIPT_DEFAULT_STYLE: prettier
 # available, this may need to be set to false so that GitHub doesn't complain
 # and fail the workflow.
 SARIF_REPORTER: true
-
-# only scan the files in This commit, not the entire history of the repo
-REPOSITORY_GITLEAKS_ARGUMENTS: --no-git
 
 # don't scan the .git directory GitHub creates at runtime
 REPOSITORY_TRUFFLEHOG_ARGUMENTS: "--exclude-paths=.trufflehogignore"
