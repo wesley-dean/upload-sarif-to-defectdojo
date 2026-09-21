@@ -8,3 +8,4 @@ megalinter-reports/
 .git
 .github
 vendor/
+dist/

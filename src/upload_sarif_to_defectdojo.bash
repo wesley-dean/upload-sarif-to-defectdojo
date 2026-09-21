@@ -48,16 +48,24 @@
 
 set -euo pipefail
 
+## @var UPLOAD_SARIF_USAGE_OVERVIEW
+## @brief Stable overview text used by every generated artifact flavor.
+readonly UPLOAD_SARIF_USAGE_OVERVIEW=":file src/upload_sarif_to_defectdojo.bash\nauthor: CQPFC Team\n:brief a shell script to automate uploading SARIF results to DefectDojo\n:details\n This is a shell script that will iterate across a series of filenames\n passed in and upload the results to a DefectDojo instance.  This\n hope is to have one process generate SARIF results (e.g., Megalinter)\n so that this script can upload the results.\n\n There exist actions in the GitHub Actions Marketplace that will\n upload SARIF results to DefectDojo, such as:\n https://github.com/marketplace/actions/defectdojo-import-scan\n\n However, we want to be able to be able to upload results to\n an internal, non-Internet-accessible DefectDojo instance, potentially\n using an internal CI/CD system (e.g., a Jenkins instance).\n\n Configuration for the tool is expected to be provided by environment\n variables; this is to support clean integration with a CI/CD\n system that populates environment variables rather than using\n flags.  Additionally, the tool is able to use a configuration\n file (e.g., \`.env\`) that can provide values.\n\n The expected usage pattern is for a repository to include a\n configuration file with parameters like project name, whether\n or not to push results to Jira, etc. and environment variables to\n pass server details and authentication credentials.  It's possible\n to use all environment variables or all configuration files or\n some mix.\n\n The script supports passing multiple files to be uploaded, even\n if those files are in different locations or even associated with\n different projects. In situations like these, a configuration\n file for each location is supported.\n\n Several locations for configuration files are searched with the\n first one found being used:\n\n 1. current directory's uploadsarifdd.conf\n 2. current directory's .uploadsarifdd.conf\n 3. file's repo's uploadsarifdd.conf\n 4. file's repo's .uploadsarif.dd.conf\n 5. ~/uploadsarifdd.conf\n 6. ~/.uploadsarifdd.conf"
+
+## @var UPLOAD_SARIF_USAGE_TEXT
+## @brief Stable option text used by every generated artifact flavor.
+readonly UPLOAD_SARIF_USAGE_TEXT="--branch\t\t: see -b\n--config\t\t: see -c\n--date\t\t: see -d\n--dryrun\t\t: see -D\n--engagement\t\t: see -e\n--help\t\t: see -h\n--mime-type\t\t: see -m\n--product\t\t: see -p\n--scan-type\t\t: see -t\n--server\t\t: see -s\n--severity\t\t: see -S\n--url\t\t: see -u\n-b\t\t: set the branch to report\n-c\t\t: specify a configuration file\n-d\t\t: set the scan date\n-D\t\t: show curl command but don't send it\n-e\t\t: set the engagement\n-m\t\t: set the MIME type of the file\n-p\t\t: set the product\n-s\t\t: set the DefectDojo server\n-S\t\t: set the minimum severity to include\n-t\t\t: set the type of scan we're reporting\n-u\t\t: set the URL to the SCM"
+
 # Maintained source may be executed directly after `make deps`.  Generated
 # consumer artifacts embed bashlog before this source, so this branch is skipped
 # in the standalone public executable.
 if ! declare -F bashlog_info >/dev/null 2>&1; then
   __upload_sarif_source_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-  __upload_sarif_bashlog="${__upload_sarif_source_dir}/../vendor/bashlog.bash"
+  __upload_sarif_bashlog="${__upload_sarif_source_dir}/../vendor/bashlog.dev.bash"
 
   if [ ! -r "$__upload_sarif_bashlog" ]; then
     printf '%s\n' \
-      'Missing vendor/bashlog.bash; run make deps or execute the built root artifact.' \
+      'Missing vendor/bashlog.dev.bash; run make deps or execute a built artifact.' \
       >&2
     if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
       exit 1
@@ -477,54 +485,32 @@ die() {
   exit 1
 }
 ## @fn display_usage()
-## @brief Generates overview and option usage text from the current script.
+## @brief Writes stable overview and option usage text.
 ## @details
-## Uses `sed` to extract the file-level overview and option annotations embedded
-## in the executable script and writes the available sections to STDOUT.
+## Uses maintained executable help data so documented, comment-stripped, and
+## minified artifact flavors expose identical help output.
 ##
 ## @par STDIN
 ## Nothing is read from STDIN.
 ## @par STDOUT
-## Generated overview and option usage sections are written when available.
+## The maintained overview and option usage sections are written.
 ## @par STDERR
-## Diagnostics from `sed` or `sort` may be written if extraction fails.
+## Nothing is written to STDERR.
 ##
-## @returns Zero or more human-readable usage lines.
+## @returns Human-readable overview and option usage text.
 ##
-## @retval 0 Usage extraction completed without a propagated command failure.
-## @note Non-zero statuses from `sed` or `sort` may be propagated when extraction fails.
+## @retval 0 The maintained help text was rendered.
 ##
 ## @par Examples
 ## @code
 ## display_usage
 ## @endcode
 
-
 display_usage() {
-  local overview
-  overview="$(sed -Ene '
-  /^[[:space:]]*##[[:space:]]*@file/,${/^[[:space:]]*$/q}
-  s/[[:space:]]*@(author|copyright|version|)/\1:/
-  s/[[:space:]]*@(note|remarks?|since|test|todo||version|warning)/\1:\n/
-  s/[[:space:]]*@(pre|post)/\1 condition:\n/
-  s/^[[:space:]]*##([[:space:]]*@[^[[:space:]]*[[:space:]]*)*//p' < "$0")"
-
-  local usage
-  usage="$(
-    (
-      sed -Ene "s/^[[:space:]]*(['\"])([[:alnum:]]*)\1[[:space:]]*\).*##-[[:space:]]*(.*)/\-\2\t\t: \3/p" < "$0"
-      sed -Ene "s/^[[:space:]]*(['\"])([-[:alnum:]]*)*\1[[:space:]]*\)[[:space:]]*set[[:space:]]*--[[:space:]]*(['\"])[@$]*\3[[:space:]]*(['\"])(-[[:alnum:]])\4.*##-[[:space:]]*(.*)/\2\t\t: \6/p" < "$0"
-    ) | sort -f
-  )"
-
-  if [ -n "$overview" ]; then
-    printf "Overview\n%s\n" "$overview"
-  fi
-
-  if [ -n "$usage" ]; then
-    printf "\nUsage:\n%s\n" "$usage"
-  fi
+  printf "Overview\n%b\n" "$UPLOAD_SARIF_USAGE_OVERVIEW"
+  printf "\nUsage:\n%b\n" "$UPLOAD_SARIF_USAGE_TEXT"
 }
+
 ## @fn print_curl_command_redacted()
 ## @brief Prints a redacted, shell-escaped curl command for diagnostics.
 ## @details
@@ -605,13 +591,7 @@ print_curl_command_redacted() {
 
 source_configuration_preserving_caller() {
   local configuration_file="$1"
-  local -a variables=(
-    DD_TOKEN DD_PRODUCT DD_SERVER_HOST DD_SERVER_PROTO DD_SERVER_PATH
-    DD_ACTIVE DD_CLOSE_OLD_FINDINGS DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE
-    DD_ENGAGEMENT DD_MINIMUM_SEVERITY DD_PUSH_TO_JIRA DD_SCAN_DATE
-    DD_SCAN_TYPE DD_VERIFIED DD_FILE_TYPE DD_BRANCH DD_COMMIT_HASH DD_SCM_URL
-    METHOD DRYRUN
-  )
+  local -a variables=(DD_TOKEN DD_PRODUCT DD_SERVER_HOST DD_SERVER_PROTO DD_SERVER_PATH DD_ACTIVE DD_CLOSE_OLD_FINDINGS DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE DD_ENGAGEMENT DD_MINIMUM_SEVERITY DD_PUSH_TO_JIRA DD_SCAN_DATE DD_SCAN_TYPE DD_VERIFIED DD_FILE_TYPE DD_BRANCH DD_COMMIT_HASH DD_SCM_URL METHOD DRYRUN)
   local -A was_set=()
   local -A values=()
   local variable
@@ -637,6 +617,163 @@ source_configuration_preserving_caller() {
     fi
   done
 }
+## @fn process_scan_file()
+## @brief Processes one scan-result path within a per-file isolation boundary.
+## @details
+## Resolves trusted configuration, validates required DefectDojo settings, derives
+## optional Git metadata, constructs the multipart request, and performs either a
+## redacted dry-run or the upload.  The caller invokes this helper in a subshell
+## so configuration and request state cannot leak between input files.
+##
+## @param filename Scan-result path to validate and upload.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Curl response data may be written for a real upload.
+## @par STDERR
+## Operational logs, validation diagnostics, and dry-run output may be written.
+##
+## @returns Zero or more response lines produced by curl.
+##
+## @retval 0 Processing completed successfully or an unmatched glob required no work.
+## @retval 1 The path or required configuration was invalid.
+## @note Non-zero statuses from external commands may be propagated to the caller.
+##
+## @par Examples
+## @code
+## (process_scan_file "report.sarif")
+## @endcode
+
+process_scan_file() {
+  local filename="$1"
+  local -a form_values=()
+  local -a configuration_sources=()
+  local -a curl_command=()
+  local configuration_file=""
+  local configuration_candidate
+  local repo_root
+  local scm_url
+  local form_value
+
+  # If the file does not exist, we need to distinguish between:
+  #   (1) a caller-supplied explicit path that is genuinely missing 
+  #     (hard error), and
+  #   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
+  #     literally (no work to do).
+  if [ ! -e "$filename" ]; then
+    if [[ "$filename" == *[\*\?\[]* ]]; then
+      bashlog_info 'No files matched pattern: %s' "$filename"
+      exit 0
+    fi
+
+    bashlog_error 'file not found: %s' "$filename"
+    exit 1
+  fi
+
+  # A path that exists but is not a regular file is not a valid upload target.
+  # This includes directories, devices, FIFOs, and other special files.
+  if [ ! -f "$filename" ]; then
+    bashlog_error 'not a regular file: %s' "$filename"
+    exit 1
+  fi
+  if [ "${#explicit_configuration_sources[@]}" -gt 0 ]; then
+    configuration_sources=("${explicit_configuration_sources[@]}")
+  else
+    configuration_sources=("./uploadsarifdd.conf" "./.uploadsarifdd.conf")
+
+    if is_git_repository "$filename"; then
+      repo_root="$(git_repository_root "$filename")"
+
+      configuration_sources+=("${repo_root}/uploadsarifdd.conf")
+      configuration_sources+=("${repo_root}/.uploadsarifdd.conf")
+    fi
+
+    configuration_sources+=("${HOME}/uploadsarifdd.conf")
+    configuration_sources+=("${HOME}/.uploadsarifdd.conf")
+  fi
+
+  configuration_file=""
+  for configuration_candidate in "${configuration_sources[@]}"; do
+    if [ -f "$configuration_candidate" ] && [ -r "$configuration_candidate" ]; then
+      configuration_file="$configuration_candidate"
+      break
+    fi
+  done
+
+  if [ "${#explicit_configuration_sources[@]}" -gt 0 ] \
+    && [ -z "$configuration_file" ]; then
+    bashlog_error 'No readable explicit configuration file was found'
+    exit 1
+  fi
+
+  if [ -n "$configuration_file" ]; then
+    source_configuration_preserving_caller "$configuration_file"
+  fi
+
+  if [ -z "${DD_TOKEN:-}" ]; then
+    bashlog_error 'No value for DD_TOKEN provided'
+    exit 1
+  fi
+
+  if [ -z "${DD_PRODUCT:-}" ]; then
+    bashlog_error 'No value for DD_PRODUCT provided'
+    exit 1
+  fi
+
+  if [ -z "${DD_SERVER_HOST:-}" ]; then
+    bashlog_error 'No value for DD_SERVER_HOST provided'
+    exit 1
+  fi
+
+  # attach form values for DefectDojo's API
+  form_values+=("active=${DD_ACTIVE:-true}")
+  form_values+=("close_old_findings=${DD_CLOSE_OLD_FINDINGS:-false}")
+  form_values+=("close_old_findings_product_scope=${DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE:-false}")
+  form_values+=("engagement_name=${DD_ENGAGEMENT:-cicd}")
+  form_values+=("minimum_severity=${DD_MINIMUM_SEVERITY:-Info}")
+  form_values+=("product_name=${DD_PRODUCT?No DD_PRODUCT provided}")
+  form_values+=("push_to_jira=${DD_PUSH_TO_JIRA:-false}")
+  form_values+=("scan_date=${DD_SCAN_DATE:-$(get_scan_date "$filename")}")
+  form_values+=("scan_type=${DD_SCAN_TYPE:-$(get_scan_type "$filename")}")
+  form_values+=("verified=${DD_VERIFIED:-true}")
+
+  # attach the filename of the scan results with curl's `@` notation
+  form_values+=("file=@${filename};type=${DD_FILE_TYPE:-$(get_mime_type "$filename")}")
+
+  if is_git_repository "$filename" \
+    || [ -n "${DD_BRANCH:-}" ]; then
+    form_values+=("branch=${DD_BRANCH:-$(git_branch "$filename")}")
+  fi
+
+  if is_git_repository "$filename" \
+    || [ -n "${DD_COMMIT_HASH:-}" ]; then
+    form_values+=("commit_hash=${DD_COMMIT_HASH:-$(get_commit_hash "$filename")}")
+  fi
+
+  if [ -n "${DD_SCM_URL:-}" ]; then
+    form_values+=("source_code_management_uri=${DD_SCM_URL}")
+  elif is_git_repository "$filename"; then
+    scm_url="$(get_scm_url "$filename" || true)"
+    if [ -n "$scm_url" ]; then
+      form_values+=("source_code_management_uri=${scm_url}")
+    fi
+  fi
+  curl_command=(curl -X "${METHOD:-POST}" "${DD_SERVER_PROTO:-https}://${DD_SERVER_HOST}${DD_SERVER_PATH:-/api/v2/import-scan/}" -H "accept: application/json" -H "Authorization: Token ${DD_TOKEN}")
+
+  for form_value in "${form_values[@]}"; do
+    curl_command+=("-F" "$form_value")
+  done
+
+  if [ "${DRYRUN:-0}" = "1" ]; then
+    print_curl_command_redacted curl_command
+    exit 0
+  fi
+
+  "${curl_command[@]}"
+
+}
+
 ## @fn main()
 ## @brief Parses uploader options and processes requested scan-result files.
 ## @details
@@ -675,7 +812,6 @@ main() {
   ###
 
   declare -a configuration_sources
-  declare -a form_values
 
   for arg in "$@"; do
     shift
@@ -728,137 +864,7 @@ main() {
   explicit_configuration_sources=("${configuration_sources[@]}")
 
   for filename in "$@"; do
-    (
-
-    # If the file does not exist, we need to distinguish between:
-    #   (1) a caller-supplied explicit path that is genuinely missing 
-    #     (hard error), and
-    #   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
-    #     literally (no work to do).
-    if [ ! -e "$filename" ]; then
-      if [[ "$filename" == *[\*\?\[]* ]]; then
-        bashlog_info 'No files matched pattern: %s' "$filename"
-        exit 0
-      fi
-
-      bashlog_error 'file not found: %s' "$filename"
-      exit 1
-    fi
-
-    # A path that exists but is not a regular file is not a valid upload target.
-    # This includes directories, devices, FIFOs, and other special files.
-    if [ ! -f "$filename" ]; then
-      bashlog_error 'not a regular file: %s' "$filename"
-      exit 1
-    fi
-    form_values=()
-
-    configuration_sources=()
-
-    if [ "${#explicit_configuration_sources[@]}" -gt 0 ]; then
-      configuration_sources=("${explicit_configuration_sources[@]}")
-    else
-      configuration_sources=(
-        "./uploadsarifdd.conf"
-        "./.uploadsarifdd.conf"
-      )
-
-      if is_git_repository "$filename"; then
-        repo_root="$(git_repository_root "$filename")"
-
-        configuration_sources+=("${repo_root}/uploadsarifdd.conf")
-        configuration_sources+=("${repo_root}/.uploadsarifdd.conf")
-      fi
-
-      configuration_sources+=("${HOME}/uploadsarifdd.conf")
-      configuration_sources+=("${HOME}/.uploadsarifdd.conf")
-    fi
-
-    configuration_file=""
-    for configuration_candidate in "${configuration_sources[@]}"; do
-      if [ -f "$configuration_candidate" ] && [ -r "$configuration_candidate" ]; then
-        configuration_file="$configuration_candidate"
-        break
-      fi
-    done
-
-    if [ "${#explicit_configuration_sources[@]}" -gt 0 ] \
-      && [ -z "$configuration_file" ]; then
-      bashlog_error 'No readable explicit configuration file was found'
-      exit 1
-    fi
-
-    if [ -n "$configuration_file" ]; then
-      source_configuration_preserving_caller "$configuration_file"
-    fi
-
-    if [ -z "${DD_TOKEN:-}" ]; then
-      bashlog_error 'No value for DD_TOKEN provided'
-      exit 1
-    fi
-
-    if [ -z "${DD_PRODUCT:-}" ]; then
-      bashlog_error 'No value for DD_PRODUCT provided'
-      exit 1
-    fi
-
-    if [ -z "${DD_SERVER_HOST:-}" ]; then
-      bashlog_error 'No value for DD_SERVER_HOST provided'
-      exit 1
-    fi
-
-    # attach form values for DefectDojo's API
-    form_values+=("active=${DD_ACTIVE:-true}")
-    form_values+=("close_old_findings=${DD_CLOSE_OLD_FINDINGS:-false}")
-    form_values+=("close_old_findings_product_scope=${DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE:-false}")
-    form_values+=("engagement_name=${DD_ENGAGEMENT:-cicd}")
-    form_values+=("minimum_severity=${DD_MINIMUM_SEVERITY:-Info}")
-    form_values+=("product_name=${DD_PRODUCT?No DD_PRODUCT provided}")
-    form_values+=("push_to_jira=${DD_PUSH_TO_JIRA:-false}")
-    form_values+=("scan_date=${DD_SCAN_DATE:-$(get_scan_date "$filename")}")
-    form_values+=("scan_type=${DD_SCAN_TYPE:-$(get_scan_type "$filename")}")
-    form_values+=("verified=${DD_VERIFIED:-true}")
-
-    # attach the filename of the scan results with curl's `@` notation
-    form_values+=("file=@${filename};type=${DD_FILE_TYPE:-$(get_mime_type "$filename")}")
-
-    if is_git_repository "$filename" \
-      || [ -n "${DD_BRANCH:-}" ]; then
-      form_values+=("branch=${DD_BRANCH:-$(git_branch "$filename")}")
-    fi
-
-    if is_git_repository "$filename" \
-      || [ -n "${DD_COMMIT_HASH:-}" ]; then
-      form_values+=("commit_hash=${DD_COMMIT_HASH:-$(get_commit_hash "$filename")}")
-    fi
-
-    if [ -n "${DD_SCM_URL:-}" ]; then
-      form_values+=("source_code_management_uri=${DD_SCM_URL}")
-    elif is_git_repository "$filename"; then
-      scm_url="$(get_scm_url "$filename" || true)"
-      if [ -n "$scm_url" ]; then
-        form_values+=("source_code_management_uri=${scm_url}")
-      fi
-    fi
-    curl_command=(
-      curl
-      -X "${METHOD:-POST}"
-      "${DD_SERVER_PROTO:-https}://${DD_SERVER_HOST}${DD_SERVER_PATH:-/api/v2/import-scan/}"
-      -H "accept: application/json"
-      -H "Authorization: Token ${DD_TOKEN}"
-    )
-
-    for form_value in "${form_values[@]}"; do
-      curl_command+=("-F" "$form_value")
-    done
-
-    if [ "${DRYRUN:-0}" = "1" ]; then
-      print_curl_command_redacted curl_command
-      exit 0
-    fi
-
-    "${curl_command[@]}"
-    )
+    (process_scan_file "$filename")
   done
 }
 

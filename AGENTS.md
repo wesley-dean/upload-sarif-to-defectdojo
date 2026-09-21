@@ -54,7 +54,7 @@ PATH-injected fakes rather than depending on mutable external services.
 
 ADR-005 governs repository dependencies and bashlog integration.  Make directly
 bootstraps only pinned `vendor/bashdeps.bash`; `dependencies.txt` owns ordinary
-repository dependencies, beginning with `vendor/bashlog.bash`.  The complete
+repository dependencies, beginning with `vendor/bashlog.dev.bash`.  The complete
 `vendor/` directory is generated state and is never committed.
 
 Use the boundaries consistently:
@@ -63,17 +63,41 @@ Use the boundaries consistently:
 - `make deps-check` is offline and verifies prepared state;
 - `make build` is offline and consumes prepared state;
 - `make all` performs dependency convergence followed by build; and
-- `make test` uses the committed public artifact and remains network-free.
+- `make test` builds and exercises all three prepared distribution flavors and remains network-free.
 
-Do not edit `upload_sarif_to_defectdojo.bash` directly.  Edit the maintained
-source under `src/`, prepare dependencies, and run `make build`.  The generated
-root artifact embeds bashlog and must remain runnable after `vendor/` is removed.
+Do not edit `upload_sarif_to_defectdojo.bash` directly.  Edit maintained source
+under `src/`, prepare dependencies, and run `make build`.  ADR-008 governs the
+documented, ordinary, and minified `dist/` artifacts plus the generated root
+compatibility file.  Every consumer artifact must remain runnable after
+`vendor/` is removed.
 
 Operational log records use the namespaced bashlog API and go to STDERR.  Do not
 reintroduce direct `logger(1)`, syslog, network, or file transports without a
 new architectural decision.  Application-specific diagnostic output such as the
 redacted dry-run curl command may remain outside bashlog where its formatting is
 part of the CLI contract.
+
+## Distribution artifacts
+
+ADR-008 governs the source-to-distribution pipeline.  `dist/` is generated
+derivative state and must remain ignored and excluded from source/security
+scanning.  Do not lint, format, or security-scan generated distribution files as
+maintained source.
+
+The build order is development artifact, ordinary comment-stripped artifact,
+then minified artifact.  Each executable receives an adjacent `.sha256`
+companion.  The root compatibility script is generated from the ordinary
+transformation with stable compatibility provenance.
+
+When changing build behavior, preserve:
+
+- one canonical maintained source under `src/`;
+- pinned bashlog and Bash-Minifier inputs through bashdeps;
+- network-free `make build` and `make test` after dependency preparation;
+- identical observable behavior across all three artifact flavors;
+- the historical root raw-download path;
+- exact six-file release publication; and
+- release validation before release-write authority is used.
 
 ## ADR maintenance
 

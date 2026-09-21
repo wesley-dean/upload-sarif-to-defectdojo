@@ -11,6 +11,8 @@ teardown() { teardown_common; }
 @test "help succeeds without DefectDojo configuration" {
   run "$SCRIPT" --help
   [ "$status" -eq 0 ]
+  [[ "$output" == *"Overview"* ]]
+  [[ "$output" == *"Usage:"* ]]
 }
 
 @test "explicitly missing file fails" {

@@ -312,9 +312,10 @@ applies the repository's shfmt policy.
 
 Repository-scoped Bash dependencies are pinned and verified with
 [bashdeps](https://github.com/wesley-dean/bashdeps).  The maintained uploader
-source is `src/upload_sarif_to_defectdojo.bash`; the root
-`upload_sarif_to_defectdojo.bash` file is a generated, committed compatibility
-artifact and should not be edited directly.
+source is `src/upload_sarif_to_defectdojo.bash`.  Builds produce documented,
+ordinary, and minified standalone artifacts beneath `dist/`; the root
+`upload_sarif_to_defectdojo.bash` file is a generated, committed ordinary
+compatibility artifact for the historical raw-download and container paths.
 
 Prepare dependencies and regenerate the standalone public artifact with:
 
@@ -325,15 +326,43 @@ make build
 ```
 
 `make deps` may access the network.  `make deps-check`, `make build`, and
-`make test` do not synchronize dependencies.  The built root executable embeds
-the pinned bashlog library, so runtime users do not need `vendor/`, bashdeps, or
-network access.
+`make test` do not synchronize dependencies.  `make test` builds and exercises
+all three distribution flavors, so prepared dependencies must already exist.
+Every generated executable embeds the pinned bashlog library; runtime users do
+not need `vendor/`, bashdeps, Bash-Minifier, or network access.
 
 Operational log records use
 [bashlog](https://github.com/wesley-dean/bashlog) and are written to STDERR.
 Interactive STDERR uses bashlog's human presentation; redirected or captured
 STDERR uses deterministic logfmt.  The uploader does not invoke `logger(1)` or
 send directly to syslog.
+
+### Distribution Artifacts
+
+`make build` generates three standalone executable representations and adjacent
+SHA-256 companions:
+
+```text
+dist/upload_sarif_to_defectdojo.dev.bash
+dist/upload_sarif_to_defectdojo.dev.bash.sha256
+dist/upload_sarif_to_defectdojo.bash
+dist/upload_sarif_to_defectdojo.bash.sha256
+dist/upload_sarif_to_defectdojo.min.bash
+dist/upload_sarif_to_defectdojo.min.bash.sha256
+```
+
+The `.dev.bash` artifact retains Doxygen/source documentation, the ordinary
+`.bash` artifact removes full-line comments, and the `.min.bash` artifact is
+derived from the ordinary representation with the pinned Bash-Minifier revision.
+All three pass the same behavior suite.  The root
+`upload_sarif_to_defectdojo.bash` remains the stable compatibility download and
+uses the ordinary representation.
+
+`dist/` is generated derivative state.  It is ignored by Git and excluded from
+source/security scanning; correctness is established through deterministic
+builds, syntax/runtime tests, behavior equivalence, and checksum verification.
+CI uploads all six files as build artifacts, and semantic-version releases attach
+the same six validated files.
 
 ### ADR Inventory
 
