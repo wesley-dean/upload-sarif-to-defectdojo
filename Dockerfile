@@ -13,7 +13,7 @@ RUN apk add --no-cache \
 && rm -rf /var/cache/apk/* \
 && ( getent passwd "${RUNNER}" || adduser -D "${RUNNER}" )
 
-COPY ./upload_sarif_to_defectdojo.bash /
+COPY --chmod=0755 ./upload_sarif_to_defectdojo.bash /
 
 HEALTHCHECK NONE
 
