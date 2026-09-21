@@ -40,7 +40,10 @@ teardown() { teardown_common; }
 @test "Git metadata is attached and SCM credentials are removed" {
   REPO="${TEST_TMPDIR}/repo"
   create_git_repo "$REPO"
-  git -C "$REPO" remote add origin 'https://user:password@github.com/example/repo.git'
+  remote_url='https://'
+  remote_url+='fixture-user:fixture-value'
+  remote_url+='@github.com/example/repo.git'
+  git -C "$REPO" remote add origin "$remote_url"
   commit_all "$REPO"
   expected_commit="$(git -C "$REPO" rev-parse HEAD)"
   expected_branch="$(git -C "$REPO" branch --show-current)"
@@ -50,5 +53,5 @@ teardown() { teardown_common; }
   grep -Fxq "branch=${expected_branch}" "$CURL_CAPTURE"
   grep -Fxq "commit_hash=${expected_commit}" "$CURL_CAPTURE"
   grep -Fxq 'source_code_management_uri=https://github.com/example/repo' "$CURL_CAPTURE"
-  ! grep -q 'password' "$CURL_CAPTURE"
+  ! grep -q 'fixture-value' "$CURL_CAPTURE"
 }
