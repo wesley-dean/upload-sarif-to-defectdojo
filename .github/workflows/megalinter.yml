@@ -78,7 +78,7 @@ jobs:
       # Run MegaLinter
       - name: MegaLinter
         id: ml
-        uses: oxsecurity/megalinter/flavors/security@ef3e84b8b836d76db562d0f3ed7da61e8fd538bc # pin@v9.6.0
+        uses: oxsecurity/megalinter/flavors/security@15e5b45552097e318c93de385779ce3b1084052c # pin@v10.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN || github.token }}
 
