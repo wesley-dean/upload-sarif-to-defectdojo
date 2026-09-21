@@ -3,6 +3,7 @@
 # bashdeps itself is bootstrapped and verified by the Makefile because the
 # dependency manager must exist before it can process this manifest.
 
-id=wesley-dean/bashlog@0.0.18 url=https://github.com/wesley-dean/bashlog/releases/download/v0.0.18/bashlog.bash dest=vendor/bashlog.bash digest=sha256:186562a526a42d3f105e36ca1006669246ee9149c83d12e0ba9044f2159fff8d
+id=wesley-dean/bashlog@0.0.18 url=https://github.com/wesley-dean/bashlog/releases/download/v0.0.18/bashlog.dev.bash dest=vendor/bashlog.dev.bash digest=sha256:d916f73092f8bc07b917910e5a54ada04ccf8259a0af01ad500084c5a0f91ea5
 id=wesley-dean/adrctl@0.0.16 url=https://github.com/wesley-dean/adrctl/releases/download/v0.0.16/adrctl.bash dest=vendor/adrctl.bash digest=sha256:782469485927d6eb6a3e7c480e793680cfc029accd15bb5e700ade82a9aa8204
 id=wesley-dean/bash-doxygen@0.5.2 url=https://github.com/wesley-dean/bash-doxygen/releases/download/v0.5.2/doxygen-bash.awk dest=vendor/doxygen-bash.awk digest=sha256:4690fe688938794b2c6e76ca35b64ee2c5b33dd12592ac7475da800b57fd57e8
+id=Zuzzuc/Bash-minifier@9c824e20815a5bca2153ec25ecc02a4edea1430e url=https://raw.githubusercontent.com/Zuzzuc/Bash-minifier/9c824e20815a5bca2153ec25ecc02a4edea1430e/Minify.sh dest=vendor/bash-minifier.bash digest=sha256:93cb422360db4cc410d19b068eb074da020a4a743f0eebc9c442d1e5acd90e9b
