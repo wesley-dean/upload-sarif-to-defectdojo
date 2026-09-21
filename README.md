@@ -353,6 +353,27 @@ make adr-index
 regenerates it, verifies that the curated prefix is unchanged, and checks that
 repeated generation is byte-identical.
 
+### Reference Documentation
+
+Maintained Bash source documentation is compiled with the pinned
+[bash-doxygen](https://github.com/wesley-dean/bash-doxygen) filter and Doxygen.
+
+Prepare dependencies, then generate the reference site with:
+
+```shell
+make deps
+make deps-check
+make docs
+```
+
+`make docs` is network-free and writes derivative HTML beneath
+`doc/reference/`.  That directory is ignored and should not be committed.
+Use `make docs-clean` to remove generated reference output.
+
+Pull-request CI verifies that the documentation can be generated from maintained
+source.  Pushes to `main` rebuild the same reference tree and publish
+`doc/reference/` to GitHub Pages.
+
 ### Configuration Precedence
 
 Configuration files are trusted executable Bash and are sourced intentionally.
