@@ -171,16 +171,6 @@ $(DIST_DEV_SCRIPT): FORCE $(SOURCE_SCRIPT)
 		exit 1; \
 	}
 	@mkdir -p "$(DIST_DIR)"
-	@overview="$$(awk ' \
-		/^[[:space:]]*##[[:space:]]*@file/ { capture=1 } \
-		capture && /^[[:space:]]*$$/ { exit } \
-		capture { \
-			line=$$0; \
-			gsub(/[[:space:]]*@(author|copyright|version)[[:space:]]*/, "", line); \
-			gsub(/^[[:space:]]*##[[:space:]]*/, "", line); \
-			gsub(/^@(file|brief|details)[[:space:]]*/, "", line); \
-			print line; \
-		}' "$(SOURCE_SCRIPT)")"; \
 	tmp="$@.tmp"; \
 	trap 'rm -f "$$tmp"' EXIT; \
 	{ \
@@ -198,7 +188,6 @@ $(DIST_DEV_SCRIPT): FORCE $(SOURCE_SCRIPT)
 		printf 'UPLOAD_SARIF_VERSION=%q\n' "$(VERSION)"; \
 		printf 'UPLOAD_SARIF_BUILD_DATE=%q\n' "$(BUILD_DATE)"; \
 		printf 'UPLOAD_SARIF_BUILD_COMMIT=%q\n' "$(BUILD_COMMIT)"; \
-		printf 'UPLOAD_SARIF_USAGE_OVERVIEW=%q\n' "$$overview"; \
 		printf '\n'; \
 		sed '1d' "$(BASHLOG_DEV)"; \
 		printf '\n'; \
