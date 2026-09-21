@@ -59,6 +59,12 @@ CLEAR_REPORT_FOLDER: true
 # non-executable bash files
 BASH_EXEC_FILTER_REGEX_EXCLUDE: "(libs?|tests?|examples?|vendor)"
 
+# The root uploader is a generated compatibility artifact containing the pinned
+# bashlog release.  ShellCheck maintained source through MegaLinter; make check
+# separately validates the generated artifact with bashlog's documented upstream
+# exceptions.
+BASH_SHELLCHECK_FILTER_REGEX_EXCLUDE: "^upload_sarif_to_defectdojo\\.bash$"
+
 # shfmt will..
 #   - use multiples of 2 spaces for indenting
 #   - alllow binary operations to start new lines
