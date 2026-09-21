@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck shell=bash
 
 ## @file upload_sarif_to_defectdojo.bash
 ## @author CQPFC Team
@@ -115,12 +116,20 @@ log_message() {
   shift
   local message="$*"
 
-  if command_exists logger ; then
-    logger -s -p "$priority" -t "$0" "$message"
-  else
-    echo "$message" >&2
+  local syslog_priority
+
+  case "$priority" in
+    ERROR) syslog_priority="user.err" ;;
+    INFO) syslog_priority="user.info" ;;
+    *) syslog_priority="$priority" ;;
+  esac
+
+  if command_exists logger \
+    && logger -s -p "$syslog_priority" -t "$0" "$message"; then
+    return 0
   fi
 
+  printf '%s\n' "$message" >&2
   return 0
 }
 
@@ -149,6 +158,10 @@ is_git_repository() {
 
   local target_dir
   target_dir="${1:-.}"
+
+  if [ ! -d "$target_dir" ]; then
+    target_dir="$(dirname -- "$target_dir")"
+  fi
 
   git -C "$target_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1
 }
@@ -187,6 +200,10 @@ git_branch() {
 
   local target_dir branch sha
   target_dir="${1:-.}"
+
+  if [ ! -d "$target_dir" ]; then
+    target_dir="$(dirname -- "$target_dir")"
+  fi
 
   is_git_repository "$target_dir" || return 1
 
@@ -274,7 +291,7 @@ get_scan_type() {
       ;;
     *)
       log_message ERROR "Unable to determine scan type"
-      exit 1
+      return 1
       ;;
   esac
 }
@@ -332,6 +349,7 @@ get_mime_type() {
 ## get_scan_date "$filename3"
 ## @endcode
 get_scan_date() {
+  local filename
   filename="${1?No filename provided to get_scan_date}"
   echo "${DD_SCAN_DATE:-$(date +'%Y-%m-%d' -d "$(stat -L -c '%y' "$filename")")}"
 }
@@ -364,10 +382,22 @@ get_scm_url() {
   local target_dir url
   target_dir="${1:-.}"
 
+  if [ ! -d "$target_dir" ]; then
+    target_dir="$(dirname -- "$target_dir")"
+  fi
+
   is_git_repository "$target_dir" || return 1
 
   url="$(git -C "$target_dir" config --get remote.origin.url 2>/dev/null || true)"
   [ -n "$url" ] || return 1
+
+  url="${url%.git}"
+  if [[ "$url" =~ ^([[:alpha:]][[:alnum:]+.-]*://)[^/@]+@(.*)$ ]]; then
+    url="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+  elif [[ "$url" == *@*:* ]]; then
+    url="${url#*@}"
+  fi
+
   printf '%s\n' "$url"
 }
 
@@ -392,6 +422,10 @@ get_commit_hash() {
 
   local target_dir commit
   target_dir="${1:-.}"
+
+  if [ ! -d "$target_dir" ]; then
+    target_dir="$(dirname -- "$target_dir")"
+  fi
 
   is_git_repository "$target_dir" || return 1
 
@@ -535,6 +569,58 @@ print_curl_command_redacted() {
 }
 
 
+## @fn source_configuration_preserving_caller()
+## @brief source trusted configuration while preserving caller-provided values
+## @details
+## Configuration files are executable Bash.  This helper snapshots supported
+## settings that already exist in the caller environment or were set by command
+## line parsing, sources the selected configuration, and restores those values so
+## precedence remains command line, environment, configuration, then defaults.
+## @param configuration_file trusted Bash configuration file to source
+## @returns Nothing is written to STDOUT.
+## @retval 0 configuration was sourced successfully
+## @par STDIN
+## STDIN is not read.
+## @par STDOUT
+## Nothing is written to STDOUT.
+## @par STDERR
+## An import diagnostic is written.
+## @note The configuration file may execute arbitrary commands as the current user.
+source_configuration_preserving_caller() {
+  local configuration_file="$1"
+  local -a variables=(
+    DD_TOKEN DD_PRODUCT DD_SERVER_HOST DD_SERVER_PROTO DD_SERVER_PATH
+    DD_ACTIVE DD_CLOSE_OLD_FINDINGS DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE
+    DD_ENGAGEMENT DD_MINIMUM_SEVERITY DD_PUSH_TO_JIRA DD_SCAN_DATE
+    DD_SCAN_TYPE DD_VERIFIED DD_FILE_TYPE DD_BRANCH DD_COMMIT_HASH DD_SCM_URL
+    METHOD DRYRUN
+  )
+  local -A was_set=()
+  local -A values=()
+  local variable
+
+  for variable in "${variables[@]}"; do
+    if declare -p "$variable" >/dev/null 2>&1; then
+      was_set["$variable"]=1
+      values["$variable"]="${!variable}"
+    fi
+  done
+
+  log_message INFO "Importing configuration from $configuration_file"
+
+  set -o allexport
+  # shellcheck disable=SC1090
+  source "$configuration_file"
+  set +o allexport
+
+  for variable in "${variables[@]}"; do
+    if [ -n "${was_set[$variable]:-}" ]; then
+      printf -v "$variable" '%s' "${values[$variable]}"
+      export "$variable"
+    fi
+  done
+}
+
 ## @fn main()
 ## @brief This is the main program loop.
 main() {
@@ -547,10 +633,6 @@ main() {
 
   declare -a configuration_sources
   declare -a form_values
-
-  METHOD="${METHOD:-POST}"
-
-  DRYRUN="${DRYRUN:-0}"
 
   for arg in "$@"; do
     shift
@@ -599,7 +681,11 @@ main() {
 
   shift "$((OPTIND - 1))"
 
+  declare -a explicit_configuration_sources
+  explicit_configuration_sources=("${configuration_sources[@]}")
+
   for filename in "$@"; do
+    (
 
     ## If the file does not exist, we need to distinguish between:
     ##   (1) a caller-supplied explicit path that is genuinely missing 
@@ -624,45 +710,56 @@ main() {
     fi
     form_values=()
 
-    configuration_sources=(
-      "./uploadsarifdd.conf"
-      "./.uploadsarifdd.conf"
-    )
+    configuration_sources=()
 
-    if is_git_repository "$filename"; then
-      repo_root="$(git_repository_root "$filename")"
+    if [ "${#explicit_configuration_sources[@]}" -gt 0 ]; then
+      configuration_sources=("${explicit_configuration_sources[@]}")
+    else
+      configuration_sources=(
+        "./uploadsarifdd.conf"
+        "./.uploadsarifdd.conf"
+      )
 
-      configuration_sources+=("${repo_root}/uploadsarifdd.conf")
-      configuration_sources+=("${repo_root}/.uploadsarifdd.conf")
+      if is_git_repository "$filename"; then
+        repo_root="$(git_repository_root "$filename")"
+
+        configuration_sources+=("${repo_root}/uploadsarifdd.conf")
+        configuration_sources+=("${repo_root}/.uploadsarifdd.conf")
+      fi
+
+      configuration_sources+=("${HOME}/uploadsarifdd.conf")
+      configuration_sources+=("${HOME}/.uploadsarifdd.conf")
     fi
 
-    configuration_sources+=("${HOME}/uploadsarifdd.conf")
-    configuration_sources+=("${HOME}/.uploadsarifdd.conf")
-
-    for configuration_file in "${configuration_sources[@]}"; do
-      if [ -e "$configuration_file" ]; then
-        echo "Importing configuration from $configuration_file"
-
-        set -o allexport
-        # shellcheck disable=SC1090
-        source "$configuration_file"
-        set +o allexport
-
+    configuration_file=""
+    for configuration_candidate in "${configuration_sources[@]}"; do
+      if [ -f "$configuration_candidate" ] && [ -r "$configuration_candidate" ]; then
+        configuration_file="$configuration_candidate"
         break
       fi
     done
+
+    if [ "${#explicit_configuration_sources[@]}" -gt 0 ] \
+      && [ -z "$configuration_file" ]; then
+      log_message ERROR "No readable explicit configuration file was found"
+      exit 1
+    fi
+
+    if [ -n "$configuration_file" ]; then
+      source_configuration_preserving_caller "$configuration_file"
+    fi
 
     if [ -z "${DD_TOKEN:-}" ]; then
       log_message ERROR "No value for DD_TOKEN provided"
       exit 1
     fi
 
-    if [ -z "$DD_PRODUCT" ]; then
+    if [ -z "${DD_PRODUCT:-}" ]; then
       log_message ERROR "No value for DD_PRODUCT provided"
       exit 1
     fi
 
-    if [ -z "$DD_SERVER_HOST" ]; then
+    if [ -z "${DD_SERVER_HOST:-}" ]; then
       log_message ERROR "No value for DD_SERVER_HOST provided"
       exit 1
     fi
@@ -698,19 +795,23 @@ main() {
     fi
     curl_command=(
       curl
-      -X "$METHOD"
+      -X "${METHOD:-POST}"
       "${DD_SERVER_PROTO:-https}://${DD_SERVER_HOST}${DD_SERVER_PATH:-/api/v2/import-scan/}"
       -H "accept: application/json"
       -H "Authorization: Token ${DD_TOKEN}"
-      "${form_values[@]/#/-F }"
     )
 
-    if [ "$DRYRUN" = "1" ]; then
+    for form_value in "${form_values[@]}"; do
+      curl_command+=("-F" "$form_value")
+    done
+
+    if [ "${DRYRUN:-0}" = "1" ]; then
       print_curl_command_redacted curl_command
       continue
     fi
 
     "${curl_command[@]}"
+    )
   done
 }
 
