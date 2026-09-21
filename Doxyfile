@@ -27,6 +27,7 @@ EXCLUDE_PATTERNS       = */vendor/* \
                          */dist/* \
                          */tests/* \
                          */doc/reference/* \
+                         */doc/adr/README.md \
                          */doc/adr/templates/*
 
 EXTENSION_MAPPING      = bash=C++
