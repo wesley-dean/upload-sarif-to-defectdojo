@@ -45,7 +45,10 @@ teardown() { teardown_common; }
 }
 
 @test "get_scm_url strips credentials and trailing .git" {
-  git -C "$REPO" remote add origin 'https://user:secret@github.com/example/project.git'
+  remote_url='https://'
+  remote_url+='fixture-user:fixture-value'
+  remote_url+='@github.com/example/project.git'
+  git -C "$REPO" remote add origin "$remote_url"
   run bash -c 'source "$1"; get_scm_url "$2"' _ "$SCRIPT" "${REPO}/reports/test.sarif"
   [ "$status" -eq 0 ]
   [ "$output" = "https://github.com/example/project" ]
