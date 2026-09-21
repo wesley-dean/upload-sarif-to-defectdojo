@@ -48,6 +48,10 @@
 
 set -euo pipefail
 
+## @var UPLOAD_SARIF_USAGE_OVERVIEW
+## @brief Stable overview text used by every generated artifact flavor.
+readonly UPLOAD_SARIF_USAGE_OVERVIEW='a shell script to automate uploading SARIF results to DefectDojo'
+
 # Maintained source may be executed directly after `make deps`.  Generated
 # consumer artifacts embed bashlog before this source, so this branch is skipped
 # in the standalone public executable.
@@ -479,10 +483,9 @@ die() {
 ## @fn display_usage()
 ## @brief Generates overview and option usage text from the current script.
 ## @details
-## Uses a build-injected overview when present so comment-stripped and minified
-## artifacts preserve the same help text.  Direct maintained-source execution
-## falls back to extracting the file-level overview from Doxygen comments.  Option
-## annotations are extracted from executable lines in the current script.
+## Uses maintained executable overview data so documented, comment-stripped, and
+## minified artifacts preserve the same help text.  Option annotations are
+## extracted from executable lines in the current script.
 ##
 ## @par STDIN
 ## Nothing is read from STDIN.
@@ -504,16 +507,7 @@ die() {
 
 display_usage() {
   local overview
-  overview="${UPLOAD_SARIF_USAGE_OVERVIEW:-}"
-
-  if [ -z "$overview" ]; then
-    overview="$(sed -Ene '
-    /^[[:space:]]*##[[:space:]]*@file/,${/^[[:space:]]*$/q}
-    s/[[:space:]]*@(author|copyright|version|)/\1:/
-    s/[[:space:]]*@(note|remarks?|since|test|todo||version|warning)/\1:\n/
-    s/[[:space:]]*@(pre|post)/\1 condition:\n/
-    s/^[[:space:]]*##([[:space:]]*@[^[[:space:]]*[[:space:]]*)*//p' < "$0")"
-  fi
+  overview="$UPLOAD_SARIF_USAGE_OVERVIEW"
 
   local usage
   usage="$(
