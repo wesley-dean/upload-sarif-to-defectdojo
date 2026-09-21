@@ -22,6 +22,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes bats shellcheck shfmt
 
+      - name: Synchronize repository dependencies
+        run: make deps
+
+      - name: Verify prepared dependency state
+        run: make deps-check
+
+      - name: Regenerate committed public artifact
+        run: |
+          make build
+          git diff --exit-code -- upload_sarif_to_defectdojo.bash
+
       - name: Check Bash source
         run: make check
 

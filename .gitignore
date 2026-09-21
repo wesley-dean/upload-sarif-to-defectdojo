@@ -7,3 +7,4 @@ tmp*
 Desktop/
 reports
 megalinter-reports/
+vendor/
