@@ -1,7 +1,10 @@
 setup_common() {
   PROJECT_ROOT="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
+  export PROJECT_ROOT
   SCRIPT="${PROJECT_ROOT}/upload_sarif_to_defectdojo.bash"
+  export SCRIPT
   TEST_TMPDIR="$(mktemp -d)"
+  export TEST_TMPDIR
   export HOME="${TEST_TMPDIR}/home"
   mkdir -p "$HOME"
 }
