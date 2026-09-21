@@ -22,6 +22,19 @@ relevant ADRs, and applicable standards under `doc/standards/`.  Applicable
 imported standards are governing requirements.  Do not silently deviate from
 them or edit the imported standards locally.
 
+## Reference documentation
+
+Bash source documentation follows
+`doc/standards/bash/documentation-standard.md`.  After preparing repository
+dependencies, generate the reference site with:
+
+```shell
+make docs
+```
+
+Generated HTML under `doc/reference/` is ignored derivative output and should
+not be committed.  Pull requests must leave documentation generation passing.
+
 ## Public domain
 
 This project is in the public domain within the United States, and copyright
