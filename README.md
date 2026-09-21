@@ -279,6 +279,18 @@ Please be aware that some SCM URLs may include encoded credentials; the
 default is filtered to remove such credentials (and any `.git` on the
 end of the URL).
 
+## Project Governance
+
+This repository adopts released engineering standards from
+[wesley-dean/coding_standards](https://github.com/wesley-dean/coding_standards).
+The complete snapshot used by this project is committed under
+`doc/standards/`, and `.codingstandardrc` records the exact release and
+release-archive SHA-256 digest.
+
+Applicable standards are project requirements.  Accepted repository-specific
+ADRs and explicit local policy may refine or supersede them.  Imported files
+under `doc/standards/` are not edited locally.
+
 ## Security Note
 
 Configuration files are sourced as executable shell code. This means that
