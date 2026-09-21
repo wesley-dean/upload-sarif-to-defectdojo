@@ -12,6 +12,8 @@ IGNORE_GITIGNORED_FILES: true
 #  - copypaste_jscpd: it's a little touchy and may not be helpful
 #  - bash-exec: some .bash files don't need to be executable
 #  - lychee: markdown-link-check gives us this functionality
+#  - gitleaks: deprecated by MegaLinter; Betterleaks scans the same surface
+#  - osv-scanner: this Bash repository has no supported package manifest or SBOM
 DISABLE_LINTERS:
   [
     REPOSITORY_DEVSKIM,
@@ -20,6 +22,8 @@ DISABLE_LINTERS:
     COPYPASTE_JSCPD,
     BASH_EXEC,
     SPELL_LYCHEE,
+    REPOSITORY_GITLEAKS,
+    REPOSITORY_OSV_SCANNER,
   ]
 
 # scan only new / updated files, not everything
