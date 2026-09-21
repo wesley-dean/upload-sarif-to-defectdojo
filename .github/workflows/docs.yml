@@ -1,0 +1,68 @@
+---
+name: Deploy documentation to Pages
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v4
+
+      - name: Install documentation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes doxygen
+
+      - name: Synchronize repository dependencies
+        run: make deps
+
+      - name: Verify prepared dependency state
+        run: make deps-check
+
+      - name: Regenerate ADR inventory
+        run: |
+          make adr-index
+          git diff --exit-code -- doc/adr/README.md
+
+      - name: Generate reference documentation
+        run: make docs
+
+      - name: Verify generated reference documentation
+        run: |
+          test -f doc/reference/index.html
+          grep -R -F 'command_exists' doc/reference >/dev/null
+          grep -R -F 'source_configuration_preserving_caller' doc/reference >/dev/null
+          git check-ignore -q doc/reference/index.html
+          test -z "$(git status --porcelain --untracked-files=all -- doc/reference)"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: doc/reference
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
