@@ -308,6 +308,33 @@ make test
 `make check` performs Bash syntax and ShellCheck validation, and `make format`
 applies the repository's shfmt policy.
 
+### Repository Dependencies and Build
+
+Repository-scoped Bash dependencies are pinned and verified with
+[bashdeps](https://github.com/wesley-dean/bashdeps).  The maintained uploader
+source is `src/upload_sarif_to_defectdojo.bash`; the root
+`upload_sarif_to_defectdojo.bash` file is a generated, committed compatibility
+artifact and should not be edited directly.
+
+Prepare dependencies and regenerate the standalone public artifact with:
+
+```shell
+make deps
+make deps-check
+make build
+```
+
+`make deps` may access the network.  `make deps-check`, `make build`, and
+`make test` do not synchronize dependencies.  The built root executable embeds
+the pinned bashlog library, so runtime users do not need `vendor/`, bashdeps, or
+network access.
+
+Operational log records use
+[bashlog](https://github.com/wesley-dean/bashlog) and are written to STDERR.
+Interactive STDERR uses bashlog's human presentation; redirected or captured
+STDERR uses deterministic logfmt.  The uploader does not invoke `logger(1)` or
+send directly to syslog.
+
 ### Configuration Precedence
 
 Configuration files are trusted executable Bash and are sourced intentionally.
