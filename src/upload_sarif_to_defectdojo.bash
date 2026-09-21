@@ -510,12 +510,7 @@ display_usage() {
   overview="$UPLOAD_SARIF_USAGE_OVERVIEW"
 
   local usage
-  usage="$(
-    (
-      sed -Ene "s/^[[:space:]]*(['\"])([[:alnum:]]*)\1[[:space:]]*\).*##-[[:space:]]*(.*)/\-\2\t\t: \3/p" < "$0"
-      sed -Ene "s/^[[:space:]]*(['\"])([-[:alnum:]]*)*\1[[:space:]]*\)[[:space:]]*set[[:space:]]*--[[:space:]]*(['\"])[@$]*\3[[:space:]]*(['\"])(-[[:alnum:]])\4.*##-[[:space:]]*(.*)/\2\t\t: \6/p" < "$0"
-    ) | sort -f
-  )"
+  usage="$(sed -Ene "s/^[[:space:]]*(['\"])([[:alnum:]]*)\1[[:space:]]*\).*##-[[:space:]]*(.*)/\-\2\t\t: \3/p" -e "s/^[[:space:]]*(['\"])([-[:alnum:]]*)*\1[[:space:]]*\)[[:space:]]*set[[:space:]]*--[[:space:]]*(['\"])[@$]*\3[[:space:]]*(['\"])(-[[:alnum:]])\4.*##-[[:space:]]*(.*)/\2\t\t: \6/p" < "$0" | sort -f)"
 
   if [ -n "$overview" ]; then
     printf "Overview\n%s\n" "$overview"
@@ -605,13 +600,7 @@ print_curl_command_redacted() {
 
 source_configuration_preserving_caller() {
   local configuration_file="$1"
-  local -a variables=(
-    DD_TOKEN DD_PRODUCT DD_SERVER_HOST DD_SERVER_PROTO DD_SERVER_PATH
-    DD_ACTIVE DD_CLOSE_OLD_FINDINGS DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE
-    DD_ENGAGEMENT DD_MINIMUM_SEVERITY DD_PUSH_TO_JIRA DD_SCAN_DATE
-    DD_SCAN_TYPE DD_VERIFIED DD_FILE_TYPE DD_BRANCH DD_COMMIT_HASH DD_SCM_URL
-    METHOD DRYRUN
-  )
+  local -a variables=(DD_TOKEN DD_PRODUCT DD_SERVER_HOST DD_SERVER_PROTO DD_SERVER_PATH DD_ACTIVE DD_CLOSE_OLD_FINDINGS DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE DD_ENGAGEMENT DD_MINIMUM_SEVERITY DD_PUSH_TO_JIRA DD_SCAN_DATE DD_SCAN_TYPE DD_VERIFIED DD_FILE_TYPE DD_BRANCH DD_COMMIT_HASH DD_SCM_URL METHOD DRYRUN)
   local -A was_set=()
   local -A values=()
   local variable
@@ -637,6 +626,163 @@ source_configuration_preserving_caller() {
     fi
   done
 }
+## @fn process_scan_file()
+## @brief Processes one scan-result path inside the caller's per-file isolation boundary.
+## @details
+## Resolves the selected configuration source, validates required DefectDojo
+## settings, derives optional Git metadata, constructs the multipart curl
+## invocation, and either renders the redacted dry-run command or performs the
+## upload.  The caller invokes this helper in a subshell so configuration sourced
+## for one scan cannot leak into subsequent inputs.  The dynamically scoped
+## `explicit_configuration_sources` array is owned by `main`.
+##
+## @param filename Scan-result path to validate and upload.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Curl response data may be written when a real upload is performed.
+## @par STDERR
+## Operational bashlog records, validation diagnostics, and dry-run output may be written.
+##
+## @returns Zero or more response lines produced by curl.
+##
+## @retval 0 The file was uploaded, dry-run output was produced, or an unmatched glob required no work.
+## @retval 1 The path or required configuration was invalid.
+## @note Non-zero statuses from external commands may be propagated and handled by the caller's ERR trap.
+##
+## @par Examples
+## @code
+## (process_scan_file "report.sarif")
+## @endcode
+process_scan_file() {
+  local filename="$1"
+
+# If the file does not exist, we need to distinguish between:
+#   (1) a caller-supplied explicit path that is genuinely missing 
+#     (hard error), and
+#   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
+#     literally (no work to do).
+if [ ! -e "$filename" ]; then
+  if [[ "$filename" == *[\*\?\[]* ]]; then
+    bashlog_info 'No files matched pattern: %s' "$filename"
+    exit 0
+  fi
+
+  bashlog_error 'file not found: %s' "$filename"
+  exit 1
+fi
+
+# A path that exists but is not a regular file is not a valid upload target.
+# This includes directories, devices, FIFOs, and other special files.
+if [ ! -f "$filename" ]; then
+  bashlog_error 'not a regular file: %s' "$filename"
+  exit 1
+fi
+local -a form_values=()
+local -a configuration_sources=()
+
+if [ "${#explicit_configuration_sources[@]}" -gt 0 ]; then
+  configuration_sources=("${explicit_configuration_sources[@]}")
+else
+  configuration_sources=("./uploadsarifdd.conf" "./.uploadsarifdd.conf")
+
+  if is_git_repository "$filename"; then
+    repo_root="$(git_repository_root "$filename")"
+
+    configuration_sources+=("${repo_root}/uploadsarifdd.conf")
+    configuration_sources+=("${repo_root}/.uploadsarifdd.conf")
+  fi
+
+  configuration_sources+=("${HOME}/uploadsarifdd.conf")
+  configuration_sources+=("${HOME}/.uploadsarifdd.conf")
+fi
+
+local configuration_file=""
+local configuration_candidate
+local repo_root
+local scm_url
+local form_value
+for configuration_candidate in "${configuration_sources[@]}"; do
+  if [ -f "$configuration_candidate" ] && [ -r "$configuration_candidate" ]; then
+    configuration_file="$configuration_candidate"
+    break
+  fi
+done
+
+if [ "${#explicit_configuration_sources[@]}" -gt 0 ] \
+  && [ -z "$configuration_file" ]; then
+  bashlog_error 'No readable explicit configuration file was found'
+  exit 1
+fi
+
+if [ -n "$configuration_file" ]; then
+  source_configuration_preserving_caller "$configuration_file"
+fi
+
+if [ -z "${DD_TOKEN:-}" ]; then
+  bashlog_error 'No value for DD_TOKEN provided'
+  exit 1
+fi
+
+if [ -z "${DD_PRODUCT:-}" ]; then
+  bashlog_error 'No value for DD_PRODUCT provided'
+  exit 1
+fi
+
+if [ -z "${DD_SERVER_HOST:-}" ]; then
+  bashlog_error 'No value for DD_SERVER_HOST provided'
+  exit 1
+fi
+
+# attach form values for DefectDojo's API
+form_values+=("active=${DD_ACTIVE:-true}")
+form_values+=("close_old_findings=${DD_CLOSE_OLD_FINDINGS:-false}")
+form_values+=("close_old_findings_product_scope=${DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE:-false}")
+form_values+=("engagement_name=${DD_ENGAGEMENT:-cicd}")
+form_values+=("minimum_severity=${DD_MINIMUM_SEVERITY:-Info}")
+form_values+=("product_name=${DD_PRODUCT?No DD_PRODUCT provided}")
+form_values+=("push_to_jira=${DD_PUSH_TO_JIRA:-false}")
+form_values+=("scan_date=${DD_SCAN_DATE:-$(get_scan_date "$filename")}")
+form_values+=("scan_type=${DD_SCAN_TYPE:-$(get_scan_type "$filename")}")
+form_values+=("verified=${DD_VERIFIED:-true}")
+
+# attach the filename of the scan results with curl's `@` notation
+form_values+=("file=@${filename};type=${DD_FILE_TYPE:-$(get_mime_type "$filename")}")
+
+if is_git_repository "$filename" \
+  || [ -n "${DD_BRANCH:-}" ]; then
+  form_values+=("branch=${DD_BRANCH:-$(git_branch "$filename")}")
+fi
+
+if is_git_repository "$filename" \
+  || [ -n "${DD_COMMIT_HASH:-}" ]; then
+  form_values+=("commit_hash=${DD_COMMIT_HASH:-$(get_commit_hash "$filename")}")
+fi
+
+if [ -n "${DD_SCM_URL:-}" ]; then
+  form_values+=("source_code_management_uri=${DD_SCM_URL}")
+elif is_git_repository "$filename"; then
+  scm_url="$(get_scm_url "$filename" || true)"
+  if [ -n "$scm_url" ]; then
+    form_values+=("source_code_management_uri=${scm_url}")
+  fi
+fi
+local -a curl_command=(curl -X "${METHOD:-POST}" "${DD_SERVER_PROTO:-https}://${DD_SERVER_HOST}${DD_SERVER_PATH:-/api/v2/import-scan/}" -H "accept: application/json" -H "Authorization: Token ${DD_TOKEN}")
+
+for form_value in "${form_values[@]}"; do
+  curl_command+=("-F" "$form_value")
+done
+
+if [ "${DRYRUN:-0}" = "1" ]; then
+  print_curl_command_redacted curl_command
+  exit 0
+fi
+
+"${curl_command[@]}"
+
+}
+
 ## @fn main()
 ## @brief Parses uploader options and processes requested scan-result files.
 ## @details
@@ -728,137 +874,7 @@ main() {
   explicit_configuration_sources=("${configuration_sources[@]}")
 
   for filename in "$@"; do
-    (
-
-    # If the file does not exist, we need to distinguish between:
-    #   (1) a caller-supplied explicit path that is genuinely missing 
-    #     (hard error), and
-    #   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
-    #     literally (no work to do).
-    if [ ! -e "$filename" ]; then
-      if [[ "$filename" == *[\*\?\[]* ]]; then
-        bashlog_info 'No files matched pattern: %s' "$filename"
-        exit 0
-      fi
-
-      bashlog_error 'file not found: %s' "$filename"
-      exit 1
-    fi
-
-    # A path that exists but is not a regular file is not a valid upload target.
-    # This includes directories, devices, FIFOs, and other special files.
-    if [ ! -f "$filename" ]; then
-      bashlog_error 'not a regular file: %s' "$filename"
-      exit 1
-    fi
-    form_values=()
-
-    configuration_sources=()
-
-    if [ "${#explicit_configuration_sources[@]}" -gt 0 ]; then
-      configuration_sources=("${explicit_configuration_sources[@]}")
-    else
-      configuration_sources=(
-        "./uploadsarifdd.conf"
-        "./.uploadsarifdd.conf"
-      )
-
-      if is_git_repository "$filename"; then
-        repo_root="$(git_repository_root "$filename")"
-
-        configuration_sources+=("${repo_root}/uploadsarifdd.conf")
-        configuration_sources+=("${repo_root}/.uploadsarifdd.conf")
-      fi
-
-      configuration_sources+=("${HOME}/uploadsarifdd.conf")
-      configuration_sources+=("${HOME}/.uploadsarifdd.conf")
-    fi
-
-    configuration_file=""
-    for configuration_candidate in "${configuration_sources[@]}"; do
-      if [ -f "$configuration_candidate" ] && [ -r "$configuration_candidate" ]; then
-        configuration_file="$configuration_candidate"
-        break
-      fi
-    done
-
-    if [ "${#explicit_configuration_sources[@]}" -gt 0 ] \
-      && [ -z "$configuration_file" ]; then
-      bashlog_error 'No readable explicit configuration file was found'
-      exit 1
-    fi
-
-    if [ -n "$configuration_file" ]; then
-      source_configuration_preserving_caller "$configuration_file"
-    fi
-
-    if [ -z "${DD_TOKEN:-}" ]; then
-      bashlog_error 'No value for DD_TOKEN provided'
-      exit 1
-    fi
-
-    if [ -z "${DD_PRODUCT:-}" ]; then
-      bashlog_error 'No value for DD_PRODUCT provided'
-      exit 1
-    fi
-
-    if [ -z "${DD_SERVER_HOST:-}" ]; then
-      bashlog_error 'No value for DD_SERVER_HOST provided'
-      exit 1
-    fi
-
-    # attach form values for DefectDojo's API
-    form_values+=("active=${DD_ACTIVE:-true}")
-    form_values+=("close_old_findings=${DD_CLOSE_OLD_FINDINGS:-false}")
-    form_values+=("close_old_findings_product_scope=${DD_CLOSE_OLD_FINDINGS_PRODUCT_SCOPE:-false}")
-    form_values+=("engagement_name=${DD_ENGAGEMENT:-cicd}")
-    form_values+=("minimum_severity=${DD_MINIMUM_SEVERITY:-Info}")
-    form_values+=("product_name=${DD_PRODUCT?No DD_PRODUCT provided}")
-    form_values+=("push_to_jira=${DD_PUSH_TO_JIRA:-false}")
-    form_values+=("scan_date=${DD_SCAN_DATE:-$(get_scan_date "$filename")}")
-    form_values+=("scan_type=${DD_SCAN_TYPE:-$(get_scan_type "$filename")}")
-    form_values+=("verified=${DD_VERIFIED:-true}")
-
-    # attach the filename of the scan results with curl's `@` notation
-    form_values+=("file=@${filename};type=${DD_FILE_TYPE:-$(get_mime_type "$filename")}")
-
-    if is_git_repository "$filename" \
-      || [ -n "${DD_BRANCH:-}" ]; then
-      form_values+=("branch=${DD_BRANCH:-$(git_branch "$filename")}")
-    fi
-
-    if is_git_repository "$filename" \
-      || [ -n "${DD_COMMIT_HASH:-}" ]; then
-      form_values+=("commit_hash=${DD_COMMIT_HASH:-$(get_commit_hash "$filename")}")
-    fi
-
-    if [ -n "${DD_SCM_URL:-}" ]; then
-      form_values+=("source_code_management_uri=${DD_SCM_URL}")
-    elif is_git_repository "$filename"; then
-      scm_url="$(get_scm_url "$filename" || true)"
-      if [ -n "$scm_url" ]; then
-        form_values+=("source_code_management_uri=${scm_url}")
-      fi
-    fi
-    curl_command=(
-      curl
-      -X "${METHOD:-POST}"
-      "${DD_SERVER_PROTO:-https}://${DD_SERVER_HOST}${DD_SERVER_PATH:-/api/v2/import-scan/}"
-      -H "accept: application/json"
-      -H "Authorization: Token ${DD_TOKEN}"
-    )
-
-    for form_value in "${form_values[@]}"; do
-      curl_command+=("-F" "$form_value")
-    done
-
-    if [ "${DRYRUN:-0}" = "1" ]; then
-      print_curl_command_redacted curl_command
-      exit 0
-    fi
-
-    "${curl_command[@]}"
-    )
+    (process_scan_file "$filename")
   done
 }
 
