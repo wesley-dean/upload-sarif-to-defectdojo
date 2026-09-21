@@ -15,8 +15,11 @@ BASHDEPS_URL := https://github.com/wesley-dean/bashdeps/releases/download/v$(BAS
 BASHDEPS_SHA256 := 5131ebb6a3a85e1d76624a37146c2442b2e57be6ffd8139b9590d28239876701
 BASHLOG := $(VENDOR_DIR)/bashlog.bash
 BASHLOG_VERSION := 0.0.18
+ADRCTL := $(VENDOR_DIR)/adrctl.bash
+ADR_INDEX_FILE := doc/adr/README.md
+ADR_INDEX_MARKER := <!-- adrctl-generated-footer -->
 
-.PHONY: all build check clean deps deps-check distclean FORCE format format-check test verify-bashdeps
+.PHONY: adr-index all build check clean deps deps-check distclean FORCE format format-check test verify-bashdeps
 
 all: deps
 	$(MAKE) --no-print-directory build
@@ -87,6 +90,39 @@ deps: $(BASHDEPS) $(DEPENDENCY_MANIFEST)
 
 deps-check: verify-bashdeps $(DEPENDENCY_MANIFEST)
 	"$(BASHDEPS)" verify "$(DEPENDENCY_MANIFEST)"
+
+adr-index:
+	@test -r "$(ADRCTL)" || { \
+		printf '%s\n' 'Missing documentation dependency vendor/adrctl.bash; run make deps' >&2; \
+		exit 1; \
+	}
+	@marker='$(ADR_INDEX_MARKER)'; \
+	count="$(grep -Fxc "$marker" "$(ADR_INDEX_FILE)" || true)"; \
+	[[ "$count" == 1 ]] || { \
+		printf 'Expected exactly one ADR inventory marker in %s; found %s\n' "$(ADR_INDEX_FILE)" "$count" >&2; \
+		exit 1; \
+	}; \
+	prefix_tmp="$(ADR_INDEX_FILE).prefix.tmp"; \
+	toc_tmp="$(ADR_INDEX_FILE).toc.tmp"; \
+	candidate_tmp="$(ADR_INDEX_FILE).tmp"; \
+	trap 'rm -f "$prefix_tmp" "$toc_tmp" "$candidate_tmp"' EXIT; \
+	awk -v marker="$marker" '{ print; if ($0 == marker) exit }' "$(ADR_INDEX_FILE)" >"$prefix_tmp"; \
+	bash "$(ADRCTL)" generate toc >"$toc_tmp"; \
+	IFS= read -r heading <"$toc_tmp"; \
+	[[ "$heading" == '# Architecture Decision Records' ]] || { \
+		printf 'Unexpected adrctl TOC heading: %s\n' "$heading" >&2; \
+		exit 1; \
+	}; \
+	{ \
+		cat "$prefix_tmp"; \
+		printf '\n'; \
+		sed '1s/^# Architecture Decision Records$/## Architecture Decision Records/' "$toc_tmp"; \
+	} >"$candidate_tmp"; \
+	if ! cmp -s "$candidate_tmp" "$(ADR_INDEX_FILE)"; then \
+		mv "$candidate_tmp" "$(ADR_INDEX_FILE)"; \
+	fi; \
+	trap - EXIT; \
+	rm -f "$prefix_tmp" "$toc_tmp" "$candidate_tmp"
 
 build: $(SOURCE_SCRIPT)
 	@test -r "$(BASHLOG)" || { \
