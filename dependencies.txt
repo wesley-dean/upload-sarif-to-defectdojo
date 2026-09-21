@@ -1,0 +1,6 @@
+# Dependencies synchronized by vendor/bashdeps.bash.
+#
+# bashdeps itself is bootstrapped and verified by the Makefile because the
+# dependency manager must exist before it can process this manifest.
+
+id=wesley-dean/bashlog@0.0.18 url=https://github.com/wesley-dean/bashlog/releases/download/v0.0.18/bashlog.bash dest=vendor/bashlog.bash digest=sha256:186562a526a42d3f105e36ca1006669246ee9149c83d12e0ba9044f2159fff8d
