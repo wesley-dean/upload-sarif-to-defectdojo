@@ -7,3 +7,4 @@ reports/
 megalinter-reports/
 .git
 .github
+vendor/
