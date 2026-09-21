@@ -54,12 +54,24 @@ building, and ordinary tests remain offline.
 
 See [ADR-005](ADR-005-adopt-bashdeps-managed-embedded-bashlog.md).
 
+### ADR-006: Use adrctl to Maintain the ADR Inventory
+
+The curated governance digest above the ADR footer marker remains maintained
+project knowledge, while the exhaustive inventory beneath it is generated from
+the ADR corpus with pinned `adrctl`.  Regeneration preserves the maintained
+prefix byte-for-byte, uses the existing bashdeps dependency boundary, and is
+network-free after dependencies are prepared.  CI verifies both idempotence and
+that the committed inventory is current.
+
+See [ADR-006](ADR-006-use-adrctl-to-maintain-adr-inventory.md).
+
 <!-- adrctl-generated-footer -->
 
 ## Architecture Decision Records
 
-- [ADR-001: Adopt Shared Coding Standards](ADR-001-adopt-shared-coding-standards.md)
-- [ADR-002: Define Runtime and Testing Contract](ADR-002-define-runtime-and-testing-contract.md)
-- [ADR-003: Treat Configuration Files as Trusted Executable Input](ADR-003-trusted-executable-configuration.md)
-- [ADR-004: Govern Release Classification Through Reviewed Conventional Titles](ADR-004-reviewed-conventional-release-classification.md)
-- [ADR-005: Adopt bashdeps-Managed Embedded bashlog](ADR-005-adopt-bashdeps-managed-embedded-bashlog.md)
+* [ADR-001: Adopt Shared Coding Standards](ADR-001-adopt-shared-coding-standards.md)
+* [ADR-002: Define Runtime and Testing Contract](ADR-002-define-runtime-and-testing-contract.md)
+* [ADR-003: Treat Configuration Files as Trusted Executable Input](ADR-003-trusted-executable-configuration.md)
+* [ADR-004: Govern Release Classification Through Reviewed Conventional Titles](ADR-004-reviewed-conventional-release-classification.md)
+* [ADR-005: Adopt bashdeps-Managed Embedded bashlog](ADR-005-adopt-bashdeps-managed-embedded-bashlog.md)
+* [ADR-006: Use adrctl to Maintain the ADR Inventory](ADR-006-use-adrctl-to-maintain-adr-inventory.md)
