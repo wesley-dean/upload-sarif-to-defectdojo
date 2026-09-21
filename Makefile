@@ -163,7 +163,7 @@ build: $(SOURCE_SCRIPT)
 		sed '1d' "$(BASHLOG)"; \
 		printf '\n'; \
 		sed -e '1d' \
-			-e 's|^## @file src/upload_sarif_to_defectdojo.bash$|## @file upload_sarif_to_defectdojo.bash|' \
+			-e 's|^## @file src/upload_sarif_to_defectdojo.bash|## @file upload_sarif_to_defectdojo.bash|' \
 			"$(SOURCE_SCRIPT)"; \
 	} >"$$tmp"; \
 	chmod 0755 "$$tmp"; \
