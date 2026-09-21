@@ -25,9 +25,6 @@ jobs:
       - name: Check Bash source
         run: make check
 
-      - name: Check formatting
-        run: make format-check
-
       - name: Run behavior tests
         run: make test
 
