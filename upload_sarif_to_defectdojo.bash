@@ -789,9 +789,13 @@ main() {
       form_values+=("commit_hash=${DD_COMMIT_HASH:-$(get_commit_hash "$filename")}")
     fi
 
-    if is_git_repository "$filename" \
-      || [ -n "${DD_SCM_URL:-}" ]; then
-      form_values+=("source_code_management_uri=${DD_SCM_URL:-$(get_scm_url "$filename")}")
+    if [ -n "${DD_SCM_URL:-}" ]; then
+      form_values+=("source_code_management_uri=${DD_SCM_URL}")
+    elif is_git_repository "$filename"; then
+      scm_url="$(get_scm_url "$filename" || true)"
+      if [ -n "$scm_url" ]; then
+        form_values+=("source_code_management_uri=${scm_url}")
+      fi
     fi
     curl_command=(
       curl
