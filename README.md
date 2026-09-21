@@ -335,6 +335,24 @@ Interactive STDERR uses bashlog's human presentation; redirected or captured
 STDERR uses deterministic logfmt.  The uploader does not invoke `logger(1)` or
 send directly to syslog.
 
+### ADR Inventory
+
+The curated current-decision digest in `doc/adr/README.md` is maintained by
+contributors above `<!-- adrctl-generated-footer -->`.  The exhaustive inventory
+below that marker is generated with the pinned `adrctl` dependency.
+
+After adding, renaming, or removing an ADR, prepare dependencies if necessary and
+regenerate the landing page with:
+
+```shell
+make deps
+make adr-index
+```
+
+`make adr-index` is network-free.  Do not hand-edit the generated footer; CI
+regenerates it, verifies that the curated prefix is unchanged, and checks that
+repeated generation is byte-identical.
+
 ### Configuration Precedence
 
 Configuration files are trusted executable Bash and are sourced intentionally.
