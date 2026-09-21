@@ -20,7 +20,7 @@ jobs:
       - name: Install validation tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes bats shellcheck shfmt
+          sudo apt-get install --yes bats doxygen graphviz shellcheck shfmt
 
       - name: Synchronize repository dependencies
         run: make deps
@@ -54,6 +54,15 @@ jobs:
           test "$before_prefix" = "$after_prefix"
           test "$first_digest" = "$second_digest"
           git diff --exit-code -- doc/adr/README.md
+
+      - name: Generate reference documentation
+        run: |
+          make docs
+          test -f doc/reference/index.html
+          grep -R -F 'command_exists' doc/reference >/dev/null
+          grep -R -F 'source_configuration_preserving_caller' doc/reference >/dev/null
+          git check-ignore -q doc/reference/index.html
+          test -z "$(git status --porcelain --untracked-files=all -- doc/reference)"
 
       - name: Check Bash source
         run: make check

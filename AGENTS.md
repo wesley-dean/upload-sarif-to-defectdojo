@@ -95,6 +95,29 @@ must preserve the curated prefix byte-for-byte.  A missing marker, duplicate
 marker, or unexpected adrctl TOC shape is a hard failure rather than permission
 to append or guess.
 
+## Reference documentation
+
+ADR-007 governs generated Doxygen reference documentation and GitHub Pages
+publication.  The maintained source under `src/` is the documentation source of
+truth; do not document the generated root compatibility artifact.
+
+The pinned `vendor/doxygen-bash.awk` filter is managed through
+`dependencies.txt`.  `make docs` consumes prepared dependency state and is
+network-free.  It runs bash-doxygen in strict mode before Doxygen and generates
+ignored derivative HTML beneath `doc/reference/`.
+
+When changing maintained Bash documentation:
+
+1. preserve executable behavior;
+2. follow `doc/standards/bash/documentation-standard.md`;
+3. run `make deps` if dependency state is absent;
+4. run `make docs`; and
+5. leave `doc/reference/` uncommitted.
+
+The Pages workflow regenerates documentation from trusted `main` and publishes
+only `doc/reference/`.  Do not grant Pages permissions to ordinary test or
+pull-request workflows.
+
 ## Configuration trust boundary
 
 ADR-003 governs configuration.  Configuration files are trusted executable Bash

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck shell=bash
 
-## @file upload_sarif_to_defectdojo.bash
+## @file src/upload_sarif_to_defectdojo.bash
 ## @author CQPFC Team
 ## @brief a shell script to automate uploading SARIF results to DefectDojo
 ## @details
@@ -69,55 +69,68 @@ if ! declare -F bashlog_info >/dev/null 2>&1; then
   source "$__upload_sarif_bashlog"
   unset __upload_sarif_source_dir __upload_sarif_bashlog
 fi
-
 ## @fn command_exists()
-## @brief Determine whether a command is available in PATH.
+## @brief Determines whether a command is available in PATH.
 ## @details
-## This helper provides a consistent and readable mechanism for probing
-## runtime dependencies.  Minimal container images and BusyBox-based systems
-## frequently omit commands that are assumed present on full distributions.
+## Performs a PATH lookup without executing the command.  The helper does not
+## validate version or behavior.
 ##
-## This function performs a simple PATH lookup and does not attempt to
-## validate version, permissions, or behavior.  It is intentionally small
-## and side-effect free so that it can be safely used inside other
-## dependency checks.
-## @param cmd The command name to check for in PATH.
-## @returns No output is written to STDOUT.
-## @retval 0 The command exists and is executable.
-## @retval 1 The command is not found in PATH.
+## @param cmd Command name to locate.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Nothing is written to STDOUT.
+## @par STDERR
+## Nothing is written to STDERR.
+##
+## @returns Nothing is written to STDOUT.
+##
+## @retval 0 The command is available in PATH.
+## @retval 1 The command is not available in PATH.
 ##
 ## @par Examples
 ## @code
-## if command_exists git ; then
+## if command_exists git; then
 ##   printf '%s\n' 'Git metadata enrichment is available.'
 ## fi
 ## @endcode
+
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
-
-
 ## @fn is_git_repository()
-## @brief determine if a file is in a git-associated file structure
+## @brief Determines whether a path is contained in a Git work tree.
 ## @details
-## This determines in the directory structure where a file is located
-## is associated with a git repository.  It does NOT check to see if
-## a file is staged or tracked by git.  We want to be able to have
-## a tool (e.g., Megalinter) deposit scan results (e.g., to
-## megalinter-reports/sarif/REPOSITORY_KICS.sarf without having
-## to add that file to the repository.  This will allow us to check
-## to see if there's a configuration file in the root of the repository
-## if, in fact, it's being run from inside of a git repository.
-## @param filename the filename to use as a basis for searching
-## @retval 0 (True) if the file's in a git directory
-## @retval 1 (False) if the file isn't in a git directory
+## Uses the supplied file or directory as the basis for repository discovery.
+## File paths are resolved through their containing directory.  The path need not
+## itself be tracked by Git.
+##
+## @param filename File or directory used as the discovery starting point.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Nothing is written to STDOUT.
+## @par STDERR
+## Nothing is written to STDERR; Git diagnostics are suppressed.
+##
+## @returns Nothing is written to STDOUT.
+##
+## @retval 0 The path is contained in a Git work tree.
+## @retval 1 Git is unavailable or the path is not contained in a Git work tree.
+##
 ## @par Examples
 ## @code
-## if is_git_repository "megalinter-reports/sarif/REPOSITORY_KICS.sarif" ; then
+## if is_git_repository "megalinter-reports/sarif/report.sarif"; then
+##   printf '%s\n' 'Repository metadata is available.'
+## fi
 ## @endcode
+
+
 is_git_repository() {
-  ## If git is not available, this host cannot perform repository introspection.
-  ## Returning non-zero allows callers to degrade gracefully under `set -euo pipefail`.
+  # If git is not available, this host cannot perform repository introspection.
+  # Returning non-zero allows callers to degrade gracefully under `set -euo pipefail`.
   command_exists git || return 1
 
   local target_dir
@@ -129,37 +142,34 @@ is_git_repository() {
 
   git -C "$target_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1
 }
-
-
 ## @fn git_branch()
-## @brief determine the current branch of a git repository
+## @brief Determines the branch identity associated with a repository path.
 ## @details
-## This will determine the current branch of a git repository
-## where a specified file lives.  Unlike `git rev-parse`,
-## we can't provide a `--prefix` so we're just going to
-## `cd` there and run `git branch`.
+## Prefers the current symbolic branch name.  Detached HEAD states fall back to
+## a non-HEAD abbreviated reference and then to the short commit SHA.
 ##
-## CI systems commonly check out repositories in a detached HEAD state.
-## In that situation `git branch --show-current` returns an empty string.
-## An empty branch value is unhelpful when associating findings with a
-## specific build, so we fall back to a stable identifier:
+## @param filename File or directory used as the repository discovery basis.
 ##
-## 1. Prefer the symbolic branch name if available.
-## 2. Fall back to `git rev-parse --abbrev-ref HEAD` when it resolves to
-##    something other than `HEAD`.
-## 3. Fall back to the short commit SHA when the repository is detached.
-## @param filename the file to use as a basis for searching
-## @retval 0 (True) if a branch could be determined
-## @retval 1 (False) if a branch could not be determined
-## @returns the current branch of the repository, or a short commit SHA in
-## detached HEAD scenarios
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## The branch name or detached-HEAD short commit SHA is written as one line.
+## @par STDERR
+## Nothing is written to STDERR; Git diagnostics are suppressed.
+##
+## @returns One line containing a branch name or short commit SHA.
+##
+## @retval 0 A branch identity or fallback SHA was determined.
+## @retval 1 The repository identity could not be determined.
+##
 ## @par Examples
 ## @code
-## filename=~/src/projecta
-## echo "The current branch for '$filename' is '$(git_branch "$filename")'"
+## branch="$(git_branch "/path/to/repo/report.sarif")"
 ## @endcode
+
+
 git_branch() {
-  ## If git is not available or the directory is not a repository, signal failure cleanly.
+  # If git is not available or the directory is not a repository, signal failure cleanly.
   command_exists git || return 1
 
   local target_dir branch sha
@@ -171,49 +181,53 @@ git_branch() {
 
   is_git_repository "$target_dir" || return 1
 
-  ## `git branch --show-current` returns an empty string for detached HEAD (common in CI).
+  # `git branch --show-current` returns an empty string for detached HEAD (common in CI).
   branch="$(git -C "$target_dir" branch --show-current 2>/dev/null || true)"
   if [ -n "$branch" ]; then
     printf '%s\n' "$branch"
     return 0
   fi
 
-  ## When detached, `--abbrev-ref HEAD` returns the literal string `HEAD`.
+  # When detached, `--abbrev-ref HEAD` returns the literal string `HEAD`.
   branch="$(git -C "$target_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   if [ -n "$branch" ] && [ "$branch" != 'HEAD' ]; then
     printf '%s\n' "$branch"
     return 0
   fi
 
-  ## Final fallback: a short commit SHA is always meaningful and stable.
+  # Final fallback: a short commit SHA is always meaningful and stable.
   sha="$(git -C "$target_dir" rev-parse --short HEAD 2>/dev/null || true)"
   [ -n "$sha" ] || return 1
   printf '%s\n' "$sha"
 }
-
-
 ## @fn git_repository_root()
-## @brief determine the top-level directory of a git repository
+## @brief Determines the top-level directory of the containing Git work tree.
 ## @details
-## This returns the absolute path to the root of the git working tree that
-## contains the provided filename.  The filename itself does not need to be
-## tracked or staged.  The only requirement is that the filename lives
-## somewhere underneath a git working tree.
+## Resolves the supplied file through its containing directory and returns the
+## absolute work-tree root.  The file itself need not be tracked.
 ##
-## This is intentionally implemented relative to the file's directory rather
-## than the current working directory so the script behaves deterministically
-## in CI/CD environments where invocation paths can vary.
-## @param filename the file to use as a basis for searching
-## @retval 0 (True) if the repository root could be determined
-## @retval 1 (False) if the repository root could not be determined
-## @returns the absolute path to the repository root via STDOUT
+## @param filename File path used as the repository discovery basis.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## The absolute repository root is written as one line.
+## @par STDERR
+## Nothing is written to STDERR; Git diagnostics are suppressed.
+##
+## @returns One line containing the absolute repository root.
+##
+## @retval 0 The repository root was determined.
+## @retval 1 The repository root could not be determined.
+##
 ## @par Examples
 ## @code
-## repo_root="$(git_repository_root "megalinter-reports/sarif/REPOSITORY_KICS.sarif")"
-## test -e "${repo_root}/uploadsarifdd.conf"
+## repo_root="$(git_repository_root "megalinter-reports/sarif/report.sarif")"
 ## @endcode
+
+
 git_repository_root() {
-  ## If git is not available, the caller cannot infer repository-root configuration paths.
+  # If git is not available, the caller cannot infer repository-root configuration paths.
   command_exists git || return 1
 
   local filename target_dir repo_root
@@ -226,28 +240,33 @@ git_repository_root() {
   [ -n "$repo_root" ] || return 1
   printf '%s\n' "$repo_root"
 }
-
-
-
 ## @fn get_scan_type()
-## @brief determine the scan type based on a filename
+## @brief Determines the DefectDojo scan type from a filename.
 ## @details
-## DefectDojo doesn't get the filename we're sending, so we
-## have to explicitly tell it what type of scan results we're
-## sending to it.  This looks at the filename and attempts to
-## determine what we're sending based on the filename.  So,
-## for example, if a file matches *.sarif, we tell DefectDojo
-## that we're sending SARIF results.  Note, this really only
-## looks at the filename -- it doesn't interact with the file;
-## in fact, it doesn't matter if the file exists or not.
-## @param filename the filename to examine
-## @retval 0 (True) if a scan type was determined
-## @retval 1 (False) if a scan type could not be determined
-## @returns the scan type of the specified file
+## Classifies supported scan-result filenames without reading their contents.
+## SARIF filenames map to the DefectDojo scan type `SARIF`.
+##
+## @param filename Filename to classify.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## The determined scan type is written as one line.
+## @par STDERR
+## An error log record is written when the filename cannot be classified.
+##
+## @returns One line containing the scan type when classification succeeds.
+##
+## @retval 0 A scan type was determined.
+## @retval 1 The filename does not map to a supported scan type.
+##
 ## @par Examples
 ## @code
-## echo "The scan type was $(get_scan_type "foobar.sarif")"
+## scan_type="$(get_scan_type "report.sarif")"
 ## @endcode
+
+
+
 get_scan_type() {
   case "${1?No filename provided to get_scan_type}" in
     *.sarif)
@@ -259,28 +278,32 @@ get_scan_type() {
       ;;
   esac
 }
-
-
 ## @fn get_mime_type()
-## @brief determine a file's MIME type based on a filename
+## @brief Determines the MIME type associated with a scan-result filename.
 ## @details
-## Just like get_scan_type(), this looks at a filename (which
-## may not exist) and attempts to determine its MIME type.
-## As a fallback, we use the `file` command to try to figure
-## it out.  If that fails, we're done.  It's less likely that
-## `file` will optimally detect the type; for example, a SARIF
-## file is reported as "text/plain" rather than ## "application/sarif"
-## Also, we're doing the simple test first because want to
-## minimize the number of external dependencies.  The result is
-## returned via STDOUT.
-## @param filename the filename to examine
-## @retval 0 (True) if a MIME type could be guessed
-## @retval 1 (False) if a MIME type couldn't be determined
-## @returns the MIME type of the specified file
+## Returns the known SARIF MIME type directly.  Other suffixes fall back to the
+## `file` command and propagate its output and status.
+##
+## @param filename Filename or file path to classify.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## The MIME type is written as one line when it can be determined.
+## @par STDERR
+## Diagnostics from the fallback `file` command may be written to STDERR.
+##
+## @returns One line containing the MIME type when classification succeeds.
+##
+## @retval 0 The MIME type was determined successfully.
+## @note Non-zero exit statuses from the fallback `file` command may be propagated unchanged.
+##
 ## @par Examples
 ## @code
-## curl -F "file=@filename;type=$(get_mime_type "$filename")" ...
+## mime_type="$(get_mime_type "report.sarif")"
 ## @endcode
+
+
 get_mime_type() {
   case "${1?No filename provded to get_mime_type}" in
     *.sarif)
@@ -291,56 +314,64 @@ get_mime_type() {
       ;;
   esac
 }
-
 ## @fn get_scan_date()
-## @brief determine when a scan report was updated
+## @brief Determines the date associated with a scan report.
 ## @details
-## This will look at a provided filename, extract its last modification
-## date, and then returns the year, month, and day-of-month in ISO-8601
-## format (YYYY-mm-dd); DefectDojo only accepts the date, not the full
-## ISO-8601 formatted datetime string.  The result is returned via STDOUT.
-## @param filename the filename to examine
-## @param DD_SCAN_DATE force this specific date
-## @retval 0 (True) if a date could be determined
-## @retval 1 (False) if a date could not be determined
-## @returns the date of the scan
+## Returns `DD_SCAN_DATE` when supplied.  Otherwise derives the date from the
+## file modification timestamp and formats it as `YYYY-MM-DD`.
+##
+## @param filename Scan-result file whose modification time supplies the default date.
+## @param DD_SCAN_DATE= Optional environment override for the returned scan date.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## The selected scan date is written as one line.
+## @par STDERR
+## Diagnostics from `stat` or `date` may be written when derivation fails.
+##
+## @returns One line containing the selected scan date.
+##
+## @note Non-zero statuses from `stat` or `date` may affect command substitution.
 ##
 ## @par Examples
 ## @code
-## date1="$(get_scan_date "$filename1")"
-## date2="$(DD_SCAN_DATE=2024-02-26 get_scan_date "$filename2")"
-## DD_SCAN_DATE=2024-02-27
-## get_scan_date "$filename3"
+## scan_date="$(get_scan_date "report.sarif")"
+## scan_date="$(DD_SCAN_DATE=2026-09-21 get_scan_date "report.sarif")"
 ## @endcode
+
 get_scan_date() {
   local filename
   filename="${1?No filename provided to get_scan_date}"
   echo "${DD_SCAN_DATE:-$(date +'%Y-%m-%d' -d "$(stat -L -c '%y' "$filename")")}"
 }
-
 ## @fn get_scm_url()
-## @brief get the SCM URL associated with a repository
+## @brief Returns a sanitized origin URL for the containing Git repository.
 ## @details
-## This is a wrapper around `git remote get-url` that will filter out
-## any usernames in the SCM URL and strip any .git extension
+## Reads `remote.origin.url`, removes a trailing `.git`, and removes embedded
+## user information from common HTTPS and SSH-style remote forms.
 ##
-## https://wesley-dean-flexion@github.com/wesley-dean-flexion/sample.git
-##   becomes
-## https://github.com/wesley-dean-flexion/sample
+## @param filename File or directory used as the repository discovery basis.
 ##
-## The default origin is 'origin' and the default location is the
-## current directory.  The result is returned via STDOUT.
-## @param filename where to find the repository
-## @param origin the origin to examine
-## @retval 0 (True) if the URL could be determined
-## @retval 1 (False) if the URL could not be determined
-## @returns URL to the SCM
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## The sanitized source-management URL is written as one line.
+## @par STDERR
+## Nothing is written to STDERR; Git diagnostics are suppressed.
+##
+## @returns One line containing the sanitized source-management URL.
+##
+## @retval 0 A usable origin URL was found and sanitized.
+## @retval 1 No usable origin URL could be determined.
+##
 ## @par Examples
 ## @code
-## remote_url="$(get_scm_url "/path/to/repo")"
+## scm_url="$(get_scm_url "/path/to/repo/report.sarif")"
 ## @endcode
+
 get_scm_url() {
-  ## If git is not available or the directory is not a repository, return non-zero without exiting the script.
+  # If git is not available or the directory is not a repository, return non-zero without exiting the script.
   command_exists git || return 1
 
   local target_dir url
@@ -364,24 +395,34 @@ get_scm_url() {
 
   printf '%s\n' "$url"
 }
-
-
 ## @fn get_commit_hash()
-## @brief get the current full commit hash for a repository
+## @brief Returns the full HEAD commit hash for the containing repository.
 ## @details
-## This is just a wrapper around `git log` that's easier to
-## read.  Nothing special, nothing filtered.  The output
-## is returned via STDOUT.
-## @param filename the location of the repository to examine
-## @retval 0 (True) if the commit hash could be found
-## @retval 1 (False) if the commit hash could not be found
-## @returns full commit hash
+## Resolves a file or directory into its containing Git work tree and returns the
+## full `HEAD` object name.
+##
+## @param filename File or directory used as the repository discovery basis.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## The full HEAD commit hash is written as one line.
+## @par STDERR
+## Nothing is written to STDERR; Git diagnostics are suppressed.
+##
+## @returns One line containing the full HEAD commit hash.
+##
+## @retval 0 The commit hash was determined.
+## @retval 1 The commit hash could not be determined.
+##
 ## @par Examples
 ## @code
-## commit_hash="$(get_commit_hash "/path/to/repo")"
+## commit_hash="$(get_commit_hash "/path/to/repo/report.sarif")"
 ## @endcode
+
+
 get_commit_hash() {
-  ## If git is not available or the directory is not a repository, return non-zero without exiting the script.
+  # If git is not available or the directory is not a repository, return non-zero without exiting the script.
   command_exists git || return 1
 
   local target_dir commit
@@ -397,21 +438,30 @@ get_commit_hash() {
   [ -n "$commit" ] || return 1
   printf '%s\n' "$commit"
 }
-
-
-
-## @fn die
-## @brief receive a trapped error and display helpful debugging details
+## @fn die()
+## @brief Reports a trapped error and terminates the uploader.
 ## @details
-## When called -- presumably by a trap -- die() will provide details
-## about what happened, including the filename, the line in the source
-## where it happened, and a stack dump showing how we got there.  It
-## will then exit with a result code of 1 (failure)
-## @retval 1 always returns failure
-## @par Example
+## Intended for the ERR trap installed by `main`.  Writes an error summary and
+## emits stack-frame and source-line context before terminating with status 1.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Stack-frame descriptions and matching source lines are written for available frames.
+## @par STDERR
+## A one-line error summary containing status, source file, and line number is written.
+##
+## @returns Zero or more stack-frame and source-context lines are written to STDOUT before termination.
+##
+## @retval 1 The function always terminates the process with failure.
+##
+## @par Examples
 ## @code
 ## trap die ERR
 ## @endcode
+
+
+
 die() {
   printf "ERROR %s in %s AT LINE %s\n" "$?" "${BASH_SOURCE[0]}" "${BASH_LINENO[0]}" 1>&2
 
@@ -426,40 +476,30 @@ die() {
   done
   exit 1
 }
-
-
-## @fn display_usage
-## @brief display some auto-generated usage information
+## @fn display_usage()
+## @brief Generates overview and option usage text from the current script.
 ## @details
-## This will take two passes over the script -- one to generate
-## an overview based on everything between the @file tag and the
-## first blank line and another to scan through getopts options
-## to extract some hints about how to use the tool.
-## @retval 0 if the extraction was successful
-## @retval 1 if there was a problem running the extraction
-## @par Example
+## Uses `sed` to extract the file-level overview and option annotations embedded
+## in the executable script and writes the available sections to STDOUT.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Generated overview and option usage sections are written when available.
+## @par STDERR
+## Diagnostics from `sed` or `sort` may be written if extraction fails.
+##
+## @returns Zero or more human-readable usage lines.
+##
+## @retval 0 Usage extraction completed without a propagated command failure.
+## @note Non-zero statuses from `sed` or `sort` may be propagated when extraction fails.
+##
+## @par Examples
 ## @code
-## for arg in "$@" ; do
-##   shift
-##   case "$arg" in
-##     '--word') set -- "$@" "-w" ;;   ##- see -w
-##     '--help') set -- "$@" "-h" ;;   ##- see -h
-##     *)        set -- "$@" "$arg" ;;
-##   esac
-## done
-##
-## # process short options
-## OPTIND=1
-###
-##
-## while getopts "w:h" option ; do
-##   case "$option" in
-##     w ) word="$OPTARG" ;; ##- set the word value
-##     h ) display_usage ; exit 0 ;;
-##     * ) printf "Invalid option '%s'" "$option" 2>&1 ; display_usage 1>&2 ; exit 1 ;;
-##   esac
-## done
+## display_usage
 ## @endcode
+
+
 display_usage() {
   local overview
   overview="$(sed -Ene '
@@ -485,29 +525,33 @@ display_usage() {
     printf "\nUsage:\n%s\n" "$usage"
   fi
 }
-
-
 ## @fn print_curl_command_redacted()
-## @brief print a redacted, shell-escaped curl command for diagnostics
+## @brief Prints a redacted, shell-escaped curl command for diagnostics.
 ## @details
-## This function prints a curl command in a copy/paste-friendly format,
-## while redacting secrets that would otherwise leak into logs.
+## Renders the named curl-command array while replacing the DefectDojo
+## Authorization token with `REDACTED`.  The routine must never emit the original
+## API token.
 ##
-## The script uses this in `--dryrun` mode to show operators what would
-## be executed without performing any network I/O.
+## @param command_name Name of the array variable containing the curl command.
 ##
-## Redaction behavior is intentionally conservative:
-## - Only the DefectDojo API token in the Authorization header is masked.
-## - The remainder of the command is preserved verbatim so that quoting,
-##   multipart form fields, and endpoint details remain debuggable.
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Nothing is written to STDOUT.
+## @par STDERR
+## A dry-run heading and the redacted shell-escaped curl command are written.
 ##
-## @param command_name  the name of an array variable holding the curl command
-## @retval 0 always
+## @returns Nothing is written to STDOUT.
+##
+## @retval 0 The redacted command was rendered.
+##
 ## @par Examples
 ## @code
-## curl_command=(curl -X POST https://dojo.example/api/v2/import-scan/ -H "Authorization: Token secret")
+## curl_command=(curl -H "Authorization: Token secret" https://dojo.example/)
 ## print_curl_command_redacted curl_command
 ## @endcode
+
+
 print_curl_command_redacted() {
   local -n command_ref="$1"
 
@@ -531,25 +575,34 @@ print_curl_command_redacted() {
 
   return 0
 }
-
-
 ## @fn source_configuration_preserving_caller()
-## @brief source trusted configuration while preserving caller-provided values
+## @brief Sources trusted configuration while preserving caller-provided values.
 ## @details
-## Configuration files are executable Bash.  This helper snapshots supported
-## settings that already exist in the caller environment or were set by command
-## line parsing, sources the selected configuration, and restores those values so
-## precedence remains command line, environment, configuration, then defaults.
-## @param configuration_file trusted Bash configuration file to source
-## @returns Nothing is written to STDOUT.
-## @retval 0 configuration was sourced successfully
+## Snapshots supported variables, sources the selected trusted executable Bash
+## configuration, and restores caller-provided values so command-line and
+## environment settings retain precedence.  The configuration file executes with
+## the uploader's privileges and may have arbitrary side effects.
+##
+## @param configuration_file Trusted Bash configuration file to source.
+##
 ## @par STDIN
-## STDIN is not read.
+## Nothing is read from STDIN.
 ## @par STDOUT
 ## Nothing is written to STDOUT.
 ## @par STDERR
-## An import diagnostic is written.
-## @note The configuration file may execute arbitrary commands as the current user.
+## An informational bashlog record identifies the imported configuration file.
+##
+## @returns Nothing is written to STDOUT.
+##
+## @retval 0 The configuration was sourced and caller-owned values were restored.
+## @note Non-zero statuses raised while sourcing the trusted configuration may be propagated.
+##
+## @par Examples
+## @code
+## DD_PRODUCT=caller-product source_configuration_preserving_caller ./uploadsarifdd.conf
+## @endcode
+
+
 source_configuration_preserving_caller() {
   local configuration_file="$1"
   local -a variables=(
@@ -584,9 +637,35 @@ source_configuration_preserving_caller() {
     fi
   done
 }
-
 ## @fn main()
-## @brief This is the main program loop.
+## @brief Parses uploader options and processes requested scan-result files.
+## @details
+## Normalizes long options, applies documented configuration precedence, derives
+## optional Git metadata, constructs the DefectDojo multipart import request, and
+## either renders a redacted dry-run command or invokes curl.  Each scan path is
+## processed in a subshell so per-file configuration does not leak to later files.
+##
+## @param args[] Command-line options followed by zero or more scan-result paths.
+##
+## @par STDIN
+## Nothing is read from STDIN.
+## @par STDOUT
+## Help text or curl response data may be written depending on the operation.
+## @par STDERR
+## Operational logs, validation diagnostics, trap diagnostics, and dry-run output may be written.
+##
+## @returns Zero or more result lines produced by help output or curl.
+##
+## @retval 0 The requested operation completed successfully.
+## @retval 1 An input or operational failure occurred.
+## @note Non-zero statuses from external commands may trigger the ERR trap and terminate through `die`.
+##
+## @par Examples
+## @code
+## DD_TOKEN=token main --product example --server dojo.example report.sarif
+## main --help
+## @endcode
+
 main() {
 
   trap die ERR
@@ -651,11 +730,11 @@ main() {
   for filename in "$@"; do
     (
 
-    ## If the file does not exist, we need to distinguish between:
-    ##   (1) a caller-supplied explicit path that is genuinely missing 
-    ##     (hard error), and
-    ##   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
-    ##     literally (no work to do).
+    # If the file does not exist, we need to distinguish between:
+    #   (1) a caller-supplied explicit path that is genuinely missing 
+    #     (hard error), and
+    #   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
+    #     literally (no work to do).
     if [ ! -e "$filename" ]; then
       if [[ "$filename" == *[\*\?\[]* ]]; then
         bashlog_info 'No files matched pattern: %s' "$filename"
@@ -666,8 +745,8 @@ main() {
       exit 1
     fi
 
-    ## A path that exists but is not a regular file is not a valid upload target.
-    ## This includes directories, devices, FIFOs, and other special files.
+    # A path that exists but is not a regular file is not a valid upload target.
+    # This includes directories, devices, FIFOs, and other special files.
     if [ ! -f "$filename" ]; then
       bashlog_error 'not a regular file: %s' "$filename"
       exit 1

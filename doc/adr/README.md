@@ -65,6 +65,17 @@ that the committed inventory is current.
 
 See [ADR-006](ADR-006-use-adrctl-to-maintain-adr-inventory.md).
 
+### ADR-007: Generate Bash Reference Documentation and Publish to Pages
+
+The maintained Bash source is compiled into reference HTML with the pinned
+`bash-doxygen` release through the repository's existing bashdeps dependency
+boundary.  `make docs` is network-free after dependency preparation and writes
+only ignored derivative output under `doc/reference/`.  Pull-request CI verifies
+documentation generation, while a dedicated least-privilege GitHub Pages workflow
+rebuilds and publishes the same documentation surface from trusted `main`.
+
+See [ADR-007](ADR-007-generate-bash-reference-documentation-and-publish-pages.md).
+
 <!-- adrctl-generated-footer -->
 
 ## Architecture Decision Records
@@ -75,3 +86,4 @@ See [ADR-006](ADR-006-use-adrctl-to-maintain-adr-inventory.md).
 * [ADR-004: Govern Release Classification Through Reviewed Conventional Titles](ADR-004-reviewed-conventional-release-classification.md)
 * [ADR-005: Adopt bashdeps-Managed Embedded bashlog](ADR-005-adopt-bashdeps-managed-embedded-bashlog.md)
 * [ADR-006: Use adrctl to Maintain the ADR Inventory](ADR-006-use-adrctl-to-maintain-adr-inventory.md)
+* [ADR-007: Generate Bash Reference Documentation and Publish to Pages](ADR-007-generate-bash-reference-documentation-and-publish-pages.md)
