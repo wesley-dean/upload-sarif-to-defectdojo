@@ -53,11 +53,11 @@ set -euo pipefail
 # in the standalone public executable.
 if ! declare -F bashlog_info >/dev/null 2>&1; then
   __upload_sarif_source_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-  __upload_sarif_bashlog="${__upload_sarif_source_dir}/../vendor/bashlog.bash"
+  __upload_sarif_bashlog="${__upload_sarif_source_dir}/../vendor/bashlog.dev.bash"
 
   if [ ! -r "$__upload_sarif_bashlog" ]; then
     printf '%s\n' \
-      'Missing vendor/bashlog.bash; run make deps or execute the built root artifact.' \
+      'Missing vendor/bashlog.dev.bash; run make deps or execute the built root artifact.' \
       >&2
     if [[ "$0" == "${BASH_SOURCE[0]}" ]]; then
       exit 1
@@ -479,8 +479,10 @@ die() {
 ## @fn display_usage()
 ## @brief Generates overview and option usage text from the current script.
 ## @details
-## Uses `sed` to extract the file-level overview and option annotations embedded
-## in the executable script and writes the available sections to STDOUT.
+## Uses a build-injected overview when present so comment-stripped and minified
+## artifacts preserve the same help text.  Direct maintained-source execution
+## falls back to extracting the file-level overview from Doxygen comments.  Option
+## annotations are extracted from executable lines in the current script.
 ##
 ## @par STDIN
 ## Nothing is read from STDIN.
@@ -502,12 +504,16 @@ die() {
 
 display_usage() {
   local overview
-  overview="$(sed -Ene '
-  /^[[:space:]]*##[[:space:]]*@file/,${/^[[:space:]]*$/q}
-  s/[[:space:]]*@(author|copyright|version|)/\1:/
-  s/[[:space:]]*@(note|remarks?|since|test|todo||version|warning)/\1:\n/
-  s/[[:space:]]*@(pre|post)/\1 condition:\n/
-  s/^[[:space:]]*##([[:space:]]*@[^[[:space:]]*[[:space:]]*)*//p' < "$0")"
+  overview="${UPLOAD_SARIF_USAGE_OVERVIEW:-}"
+
+  if [ -z "$overview" ]; then
+    overview="$(sed -Ene '
+    /^[[:space:]]*##[[:space:]]*@file/,${/^[[:space:]]*$/q}
+    s/[[:space:]]*@(author|copyright|version|)/\1:/
+    s/[[:space:]]*@(note|remarks?|since|test|todo||version|warning)/\1:\n/
+    s/[[:space:]]*@(pre|post)/\1 condition:\n/
+    s/^[[:space:]]*##([[:space:]]*@[^[[:space:]]*[[:space:]]*)*//p' < "$0")"
+  fi
 
   local usage
   usage="$(
