@@ -129,8 +129,8 @@ command_exists() {
 
 
 is_git_repository() {
-  ## If git is not available, this host cannot perform repository introspection.
-  ## Returning non-zero allows callers to degrade gracefully under `set -euo pipefail`.
+  # If git is not available, this host cannot perform repository introspection.
+  # Returning non-zero allows callers to degrade gracefully under `set -euo pipefail`.
   command_exists git || return 1
 
   local target_dir
@@ -169,7 +169,7 @@ is_git_repository() {
 
 
 git_branch() {
-  ## If git is not available or the directory is not a repository, signal failure cleanly.
+  # If git is not available or the directory is not a repository, signal failure cleanly.
   command_exists git || return 1
 
   local target_dir branch sha
@@ -181,21 +181,21 @@ git_branch() {
 
   is_git_repository "$target_dir" || return 1
 
-  ## `git branch --show-current` returns an empty string for detached HEAD (common in CI).
+  # `git branch --show-current` returns an empty string for detached HEAD (common in CI).
   branch="$(git -C "$target_dir" branch --show-current 2>/dev/null || true)"
   if [ -n "$branch" ]; then
     printf '%s\n' "$branch"
     return 0
   fi
 
-  ## When detached, `--abbrev-ref HEAD` returns the literal string `HEAD`.
+  # When detached, `--abbrev-ref HEAD` returns the literal string `HEAD`.
   branch="$(git -C "$target_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   if [ -n "$branch" ] && [ "$branch" != 'HEAD' ]; then
     printf '%s\n' "$branch"
     return 0
   fi
 
-  ## Final fallback: a short commit SHA is always meaningful and stable.
+  # Final fallback: a short commit SHA is always meaningful and stable.
   sha="$(git -C "$target_dir" rev-parse --short HEAD 2>/dev/null || true)"
   [ -n "$sha" ] || return 1
   printf '%s\n' "$sha"
@@ -227,7 +227,7 @@ git_branch() {
 
 
 git_repository_root() {
-  ## If git is not available, the caller cannot infer repository-root configuration paths.
+  # If git is not available, the caller cannot infer repository-root configuration paths.
   command_exists git || return 1
 
   local filename target_dir repo_root
@@ -371,7 +371,7 @@ get_scan_date() {
 ## @endcode
 
 get_scm_url() {
-  ## If git is not available or the directory is not a repository, return non-zero without exiting the script.
+  # If git is not available or the directory is not a repository, return non-zero without exiting the script.
   command_exists git || return 1
 
   local target_dir url
@@ -422,7 +422,7 @@ get_scm_url() {
 
 
 get_commit_hash() {
-  ## If git is not available or the directory is not a repository, return non-zero without exiting the script.
+  # If git is not available or the directory is not a repository, return non-zero without exiting the script.
   command_exists git || return 1
 
   local target_dir commit
@@ -730,11 +730,11 @@ main() {
   for filename in "$@"; do
     (
 
-    ## If the file does not exist, we need to distinguish between:
-    ##   (1) a caller-supplied explicit path that is genuinely missing 
-    ##     (hard error), and
-    ##   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
-    ##     literally (no work to do).
+    # If the file does not exist, we need to distinguish between:
+    #   (1) a caller-supplied explicit path that is genuinely missing 
+    #     (hard error), and
+    #   (2) an unmatched shell glob (e.g., *.sarif) that Bash passed through
+    #     literally (no work to do).
     if [ ! -e "$filename" ]; then
       if [[ "$filename" == *[\*\?\[]* ]]; then
         bashlog_info 'No files matched pattern: %s' "$filename"
@@ -745,8 +745,8 @@ main() {
       exit 1
     fi
 
-    ## A path that exists but is not a regular file is not a valid upload target.
-    ## This includes directories, devices, FIFOs, and other special files.
+    # A path that exists but is not a regular file is not a valid upload target.
+    # This includes directories, devices, FIFOs, and other special files.
     if [ ! -f "$filename" ]; then
       bashlog_error 'not a regular file: %s' "$filename"
       exit 1
