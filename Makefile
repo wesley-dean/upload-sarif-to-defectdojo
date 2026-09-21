@@ -18,8 +18,10 @@ BASHLOG_VERSION := 0.0.18
 ADRCTL := $(VENDOR_DIR)/adrctl.bash
 ADR_INDEX_FILE := doc/adr/README.md
 ADR_INDEX_MARKER := <!-- adrctl-generated-footer -->
+BASH_DOXYGEN := $(VENDOR_DIR)/doxygen-bash.awk
+DOCS_OUTPUT := doc/reference
 
-.PHONY: adr-index all build check clean deps deps-check distclean FORCE format format-check test verify-bashdeps
+.PHONY: adr-index all build check clean deps deps-check distclean docs docs-clean FORCE format format-check test verify-bashdeps
 
 all: deps
 	$(MAKE) --no-print-directory build
@@ -124,6 +126,26 @@ adr-index:
 	trap - EXIT; \
 	rm -f "$$prefix_tmp" "$$toc_tmp" "$$candidate_tmp"
 
+docs:
+	@test -r "$(BASH_DOXYGEN)" || { \
+		printf '%s\n' 'Missing documentation dependency vendor/doxygen-bash.awk; run make deps' >&2; \
+		exit 1; \
+	}
+	@command -v doxygen >/dev/null 2>&1 || { \
+		printf '%s\n' 'doxygen is required to generate reference documentation' >&2; \
+		exit 1; \
+	}
+	awk -f "$(BASH_DOXYGEN)" -- --strict "$(SOURCE_SCRIPT)" >/dev/null
+	rm -rf "$(DOCS_OUTPUT)"
+	doxygen Doxyfile
+	@test -f "$(DOCS_OUTPUT)/index.html" || { \
+		printf '%s\n' 'Doxygen did not generate doc/reference/index.html' >&2; \
+		exit 1; \
+	}
+
+docs-clean:
+	rm -rf "$(DOCS_OUTPUT)"
+
 build: $(SOURCE_SCRIPT)
 	@test -r "$(BASHLOG)" || { \
 		printf '%s\n' 'Missing build dependency vendor/bashlog.bash; run make deps or make all' >&2; \
@@ -140,7 +162,9 @@ build: $(SOURCE_SCRIPT)
 		printf '\n'; \
 		sed '1d' "$(BASHLOG)"; \
 		printf '\n'; \
-		sed '1d' "$(SOURCE_SCRIPT)"; \
+		sed -e '1d' \
+			-e 's|^## @file src/upload_sarif_to_defectdojo.bash$|## @file upload_sarif_to_defectdojo.bash|' \
+			"$(SOURCE_SCRIPT)"; \
 	} >"$$tmp"; \
 	chmod 0755 "$$tmp"; \
 	bash -n "$$tmp"; \
@@ -170,5 +194,5 @@ test:
 clean:
 	rm -f "$(SCRIPT).tmp"
 
-distclean: clean
+distclean: clean docs-clean
 	rm -rf "$(VENDOR_DIR)"
