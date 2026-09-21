@@ -15,6 +15,13 @@ Our staff follow the
 [TTS Code of Conduct](https://18f.gsa.gov/code-of-conduct/) and
 all contributors should do the same.
 
+## Engineering standards
+
+Before submitting changes, review `AGENTS.md`, `doc/adr/README.md`, the
+relevant ADRs, and applicable standards under `doc/standards/`.  Applicable
+imported standards are governing requirements.  Do not silently deviate from
+them or edit the imported standards locally.
+
 ## Public domain
 
 This project is in the public domain within the United States, and copyright

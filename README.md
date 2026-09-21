@@ -69,7 +69,7 @@ first one found being used:
 1. current directory's uploadsarifdd.conf
 2. current directory's .uploadsarifdd.conf
 3. file's repo's uploadsarifdd.conf
-4. file's repo's .uploadsarif.dd.conf
+4. file's repo's .uploadsarifdd.conf
 5. ~/uploadsarifdd.conf
 6. ~/.uploadsarifdd.conf
 
@@ -278,6 +278,51 @@ This is optional and the default value is determined using `git remote`.
 Please be aware that some SCM URLs may include encoded credentials; the
 default is filtered to remove such credentials (and any `.git` on the
 end of the URL).
+
+## Project Governance
+
+This repository adopts released engineering standards from
+[wesley-dean/coding_standards](https://github.com/wesley-dean/coding_standards).
+The complete snapshot used by this project is committed under
+`doc/standards/`, and `.codingstandardrc` records the exact release and
+release-archive SHA-256 digest.
+
+Applicable standards are project requirements.  Accepted repository-specific
+ADRs and explicit local policy may refine or supersede them.  Imported files
+under `doc/standards/` are not edited locally.
+
+## Runtime and Testing
+
+The directly downloadable public executable remains
+`upload_sarif_to_defectdojo.bash`.  The supported runtime is Bash 4.3 or newer
+on Linux.  A normal upload requires `curl`; Git is optional and is used only to
+enrich imports with branch, commit, and source-management metadata.
+
+Behavior tests use Bats and do not require a live DefectDojo instance or real API
+token.  Run them with:
+
+```shell
+make test
+```
+
+`make check` performs Bash syntax and ShellCheck validation, and `make format`
+applies the repository's shfmt policy.
+
+### Configuration Precedence
+
+Configuration files are trusted executable Bash and are sourced intentionally.
+Only use configuration files you trust.
+
+When the same setting is provided from multiple sources, precedence is:
+
+1. command-line option;
+2. pre-existing environment variable;
+3. selected configuration file; and
+4. built-in default.
+
+An explicit `--config` / `-c` path is considered before automatic discovery.
+If explicit configuration paths are supplied and none is readable, the command
+fails instead of silently selecting a different discovered file.
 
 ## Security Note
 

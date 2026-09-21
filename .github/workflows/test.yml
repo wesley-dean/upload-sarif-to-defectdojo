@@ -6,22 +6,65 @@ on:
   pull_request:
   workflow_dispatch:
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
-  test_image:
-    runs-on: ubuntu-latest
+  validate:
+    name: behavior-and-static-analysis
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pin@v3
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # pin@v2
+      - name: Install validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bats shellcheck shfmt
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # pin@v2
+      - name: Check Bash source
+        run: make check
 
-      - name: Build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # pin@v4
+      - name: Run behavior tests
+        run: make test
+
+      - name: Verify Bash 4.3 syntax and help path
+        run: |
+          docker run --rm \
+            -v "${PWD}:/work" \
+            -w /work \
+            bash:4.3 \
+            bash -c 'bash -n upload_sarif_to_defectdojo.bash && ./upload_sarif_to_defectdojo.bash --help >/dev/null'
+
+  pr-title:
+    name: conventional-pr-title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    env:
+      PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - name: Validate Conventional Commit title
+        shell: bash
+        run: |
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([[:alnum:]_.-]+\))?(!)?: .+'
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            printf 'Pull request title is not a Conventional Commit title: %s\n' "$PR_TITLE" >&2
+            exit 1
+          fi
+
+  test_image:
+    name: test_image
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v4
+
+      - name: Build image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # pin@v6
         with:
+          context: .
           push: false
+          tags: upload-sarif-to-defectdojo:test
+
+      - name: Smoke-test image help path
+        run: docker run --rm upload-sarif-to-defectdojo:test --help >/dev/null

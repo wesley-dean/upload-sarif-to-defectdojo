@@ -1,7 +1,5 @@
 FROM alpine:3.19
 
-ENV RUNNER="runner"
-
 SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 
 RUN apk add --no-cache \
@@ -11,11 +9,11 @@ RUN apk add --no-cache \
   git=~2 \
   sed=~4 \
 && rm -rf /var/cache/apk/* \
-&& ( getent passwd "${RUNNER}" || adduser -D "${RUNNER}" )
+&& adduser -D -u 1000 runner
 
-COPY ./upload_sarif_to_defectdojo.bash /
+COPY --chmod=0755 ./upload_sarif_to_defectdojo.bash /
 
 HEALTHCHECK NONE
 
-USER "${RUNNER}"
+USER 1000
 ENTRYPOINT ["/upload_sarif_to_defectdojo.bash"]
