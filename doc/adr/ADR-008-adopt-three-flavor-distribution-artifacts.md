@@ -65,10 +65,16 @@ committed.  The build SHALL produce exactly these six distribution files:
 - `dist/upload_sarif_to_defectdojo.min.bash.sha256`
 
 The root `upload_sarif_to_defectdojo.bash` file SHALL remain committed for
-backward compatibility and SHALL be a byte-for-byte mirror of
-`dist/upload_sarif_to_defectdojo.bash` after an ordinary development build.
-It remains the file copied by the existing container image and the historical raw
-download path.
+backward compatibility and SHALL be generated from the same ordinary-artifact
+transformation.  It remains the file copied by the existing container image and
+the historical raw download path.
+
+The committed compatibility artifact cannot truthfully embed the hash of the
+commit that contains itself: changing the embedded hash changes the commit hash.
+Its project/version fields SHALL therefore use the development version while
+build date and build commit use stable `unknown` compatibility values.  CI SHALL
+verify that, after normalizing the three provenance assignments, the compatibility
+artifact is byte-equivalent to the ordinary development artifact.
 
 The fully documented development artifact SHALL be assembled first from:
 
@@ -132,7 +138,7 @@ rather than assuming the root compatibility file.  CI SHALL additionally verify:
 
 - exactly three executable Bash artifacts and three checksum companions;
 - checksum validity;
-- root compatibility-file byte equality with the ordinary artifact;
+- root compatibility-file equivalence with the ordinary artifact after normalizing provenance assignments;
 - deterministic rebuild bytes when version/provenance inputs are unchanged;
 - non-identity of ordinary and minified artifacts;
 - the presence of Doxygen documentation in the development artifact;
@@ -165,7 +171,8 @@ not refined here.
 ### Replace the historical root download with a dist URL
 
 Rejected because existing curl consumers would break or require migration for no
-runtime benefit.  Keeping a committed mirror is small and testable.
+runtime benefit.  Keeping a committed compatibility representation from the same transformation
+chain is small and testable.
 
 ### Keep bashlog.bash as the embedded dependency in the development artifact
 
