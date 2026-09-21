@@ -616,7 +616,7 @@ source_configuration_preserving_caller() {
   for variable in "${variables[@]}"; do
     if [ -n "${was_set[$variable]:-}" ]; then
       printf -v "$variable" '%s' "${values[$variable]}"
-      export "$variable"
+      export "${variable?}"
     fi
   done
 }
@@ -695,7 +695,7 @@ main() {
     if [ ! -e "$filename" ]; then
       if [[ "$filename" == *[\*\?\[]* ]]; then
         log_message INFO "No files matched pattern: $filename"
-        continue
+        exit 0
       fi
 
       log_message ERROR "file not found: $filename"
@@ -807,7 +807,7 @@ main() {
 
     if [ "${DRYRUN:-0}" = "1" ]; then
       print_curl_command_redacted curl_command
-      continue
+      exit 0
     fi
 
     "${curl_command[@]}"
