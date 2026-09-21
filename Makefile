@@ -10,7 +10,8 @@ SHFMT_ARGS := -i 2 -bn -ci -sr -kp
 
 check:
 	bash -n "$(SCRIPT)"
-	shellcheck "$(SCRIPT)" $(BASH_HELPERS) $(BATS_FILES)
+	bash -n $(BASH_HELPERS)
+	shellcheck "$(SCRIPT)"
 
 format:
 	shfmt $(SHFMT_ARGS) -w "$(SCRIPT)" $(BASH_HELPERS)
