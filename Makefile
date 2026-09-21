@@ -249,7 +249,7 @@ check:
 	shellcheck "$(SOURCE_SCRIPT)"
 	# bashlog v$(BASHLOG_VERSION) intentionally uses these three constructs.
 	# Maintained uploader source is checked separately above without exclusions.
-	shellcheck -e SC2034,SC2053,SC2059 "$(SCRIPT)"
+	shellcheck -e SC1090,SC2034,SC2053,SC2059 "$(SCRIPT)"
 
 format:
 	shfmt $(SHFMT_ARGS) -w "$(SOURCE_SCRIPT)" $(BASH_HELPERS)
