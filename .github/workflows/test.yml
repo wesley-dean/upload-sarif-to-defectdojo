@@ -33,6 +33,28 @@ jobs:
           make build
           git diff --exit-code -- upload_sarif_to_defectdojo.bash
 
+      - name: Verify ADR landing page generation
+        shell: bash
+        run: |
+          marker='<!-- adrctl-generated-footer -->'
+          prefix_digest() {
+            awk -v marker="$marker" '{ print; if ($0 == marker) exit }' doc/adr/README.md |
+              sha256sum |
+              awk '{ print $1 }'
+          }
+
+          before_prefix="$(prefix_digest)"
+          make adr-index
+          after_prefix="$(prefix_digest)"
+          first_digest="$(sha256sum doc/adr/README.md | awk '{ print $1 }')"
+
+          make adr-index
+          second_digest="$(sha256sum doc/adr/README.md | awk '{ print $1 }')"
+
+          test "$before_prefix" = "$after_prefix"
+          test "$first_digest" = "$second_digest"
+          git diff --exit-code -- doc/adr/README.md
+
       - name: Check Bash source
         run: make check
 
