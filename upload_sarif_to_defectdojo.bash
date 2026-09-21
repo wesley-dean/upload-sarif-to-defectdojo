@@ -1220,25 +1220,50 @@ bashlog_emergency() {
 
 # shellcheck shell=bash
 
-## @file src/upload_sarif_to_defectdojo.bash
-## @brief Uploads SARIF scan results to a DefectDojo instance.
-## @details
-## Iterates over scan-result paths, applies trusted configuration, enriches
-## imports with optional Git metadata, and submits multipart scan imports to
-## DefectDojo.  The maintained source is assembled with pinned bashlog bytes into
-## the standalone compatibility artifact used by runtime consumers.
-##
-## Configuration files are executable Bash and therefore form a trust boundary.
-## Dry-run rendering must never expose the DefectDojo API token.
-##
+## @file upload_sarif_to_defectdojo.bash
 ## @author CQPFC Team
+## @brief a shell script to automate uploading SARIF results to DefectDojo
+## @details
+## This is a shell script that will iterate across a series of filenames
+## passed in and upload the results to a DefectDojo instance.  This
+## hope is to have one process generate SARIF results (e.g., Megalinter)
+## so that this script can upload the results.
 ##
-## @par Examples
-## @code
-## DD_TOKEN=token ./upload_sarif_to_defectdojo.bash --product example \
-##   --server dojo.example report.sarif
-## ./upload_sarif_to_defectdojo.bash --help
-## @endcode
+## There exist actions in the GitHub Actions Marketplace that will
+## upload SARIF results to DefectDojo, such as:
+## https://github.com/marketplace/actions/defectdojo-import-scan
+##
+## However, we want to be able to be able to upload results to
+## an internal, non-Internet-accessible DefectDojo instance, potentially
+## using an internal CI/CD system (e.g., a Jenkins instance).
+##
+## Configuration for the tool is expected to be provided by environment
+## variables; this is to support clean integration with a CI/CD
+## system that populates environment variables rather than using
+## flags.  Additionally, the tool is able to use a configuration
+## file (e.g., `.env`) that can provide values.
+##
+## The expected usage pattern is for a repository to include a
+## configuration file with parameters like project name, whether
+## or not to push results to Jira, etc. and environment variables to
+## pass server details and authentication credentials.  It's possible
+## to use all environment variables or all configuration files or
+## some mix.
+##
+## The script supports passing multiple files to be uploaded, even
+## if those files are in different locations or even associated with
+## different projects. In situations like these, a configuration
+## file for each location is supported.
+##
+## Several locations for configuration files are searched with the
+## first one found being used:
+##
+## 1. current directory's uploadsarifdd.conf
+## 2. current directory's .uploadsarifdd.conf
+## 3. file's repo's uploadsarifdd.conf
+## 4. file's repo's .uploadsarif.dd.conf
+## 5. ~/uploadsarifdd.conf
+## 6. ~/.uploadsarifdd.conf
 
 set -euo pipefail
 
