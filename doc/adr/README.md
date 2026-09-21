@@ -76,6 +76,18 @@ rebuilds and publishes the same documentation surface from trusted `main`.
 
 See [ADR-007](ADR-007-generate-bash-reference-documentation-and-publish-pages.md).
 
+### ADR-008: Adopt Three-Flavor Distribution Artifacts
+
+The maintained source now produces documented, ordinary, and minified standalone
+Bash artifacts beneath `dist/`, each with an adjacent SHA-256 companion.  The
+historical root script remains a committed byte-for-byte mirror of the ordinary
+artifact for curl and container compatibility, while the behavior suite exercises
+all three generated flavors.  Distribution output is ignored and excluded from
+source scanning, and release publication consumes previously validated candidate
+bytes rather than rebuilding with release-write authority.
+
+See [ADR-008](ADR-008-adopt-three-flavor-distribution-artifacts.md).
+
 <!-- adrctl-generated-footer -->
 
 ## Architecture Decision Records
@@ -87,3 +99,4 @@ See [ADR-007](ADR-007-generate-bash-reference-documentation-and-publish-pages.md
 * [ADR-005: Adopt bashdeps-Managed Embedded bashlog](ADR-005-adopt-bashdeps-managed-embedded-bashlog.md)
 * [ADR-006: Use adrctl to Maintain the ADR Inventory](ADR-006-use-adrctl-to-maintain-adr-inventory.md)
 * [ADR-007: Generate Bash Reference Documentation and Publish to Pages](ADR-007-generate-bash-reference-documentation-and-publish-pages.md)
+* [ADR-008: Adopt Three-Flavor Distribution Artifacts](ADR-008-adopt-three-flavor-distribution-artifacts.md)
