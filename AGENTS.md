@@ -75,6 +75,26 @@ new architectural decision.  Application-specific diagnostic output such as the
 redacted dry-run curl command may remain outside bashlog where its formatting is
 part of the CLI contract.
 
+## ADR maintenance
+
+ADR-006 governs `doc/adr/README.md` generation.  The
+`<!-- adrctl-generated-footer -->` marker separates maintained current-governance
+documentation from the exhaustive mechanical inventory.
+
+When adding or materially changing an ADR:
+
+1. keep the ADR status `Accepted`;
+2. update the curated `Current Decisions` digest above the marker when current
+   governance changes;
+3. never hand-edit the inventory below the marker;
+4. prepare dependencies with `make deps` when necessary; and
+5. run `make adr-index` to regenerate the committed footer.
+
+`make adr-index` consumes pinned `vendor/adrctl.bash`, is network-free, and
+must preserve the curated prefix byte-for-byte.  A missing marker, duplicate
+marker, or unexpected adrctl TOC shape is a hard failure rather than permission
+to append or guess.
+
 ## Configuration trust boundary
 
 ADR-003 governs configuration.  Configuration files are trusted executable Bash
