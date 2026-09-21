@@ -97,32 +97,32 @@ adr-index:
 		exit 1; \
 	}
 	@marker='$(ADR_INDEX_MARKER)'; \
-	count="$(grep -Fxc "$marker" "$(ADR_INDEX_FILE)" || true)"; \
-	[[ "$count" == 1 ]] || { \
-		printf 'Expected exactly one ADR inventory marker in %s; found %s\n' "$(ADR_INDEX_FILE)" "$count" >&2; \
+	count="$$(grep -Fxc "$$marker" "$(ADR_INDEX_FILE)" || true)"; \
+	[[ "$$count" == 1 ]] || { \
+		printf 'Expected exactly one ADR inventory marker in %s; found %s\n' "$(ADR_INDEX_FILE)" "$$count" >&2; \
 		exit 1; \
 	}; \
 	prefix_tmp="$(ADR_INDEX_FILE).prefix.tmp"; \
 	toc_tmp="$(ADR_INDEX_FILE).toc.tmp"; \
 	candidate_tmp="$(ADR_INDEX_FILE).tmp"; \
-	trap 'rm -f "$prefix_tmp" "$toc_tmp" "$candidate_tmp"' EXIT; \
-	awk -v marker="$marker" '{ print; if ($0 == marker) exit }' "$(ADR_INDEX_FILE)" >"$prefix_tmp"; \
-	bash "$(ADRCTL)" generate toc >"$toc_tmp"; \
-	IFS= read -r heading <"$toc_tmp"; \
-	[[ "$heading" == '# Architecture Decision Records' ]] || { \
-		printf 'Unexpected adrctl TOC heading: %s\n' "$heading" >&2; \
+	trap 'rm -f "$$prefix_tmp" "$$toc_tmp" "$$candidate_tmp"' EXIT; \
+	awk -v marker="$$marker" '{ print; if ($$0 == marker) exit }' "$(ADR_INDEX_FILE)" >"$$prefix_tmp"; \
+	bash "$(ADRCTL)" generate toc >"$$toc_tmp"; \
+	IFS= read -r heading <"$$toc_tmp"; \
+	[[ "$$heading" == '# Architecture Decision Records' ]] || { \
+		printf 'Unexpected adrctl TOC heading: %s\n' "$$heading" >&2; \
 		exit 1; \
 	}; \
 	{ \
-		cat "$prefix_tmp"; \
+		cat "$$prefix_tmp"; \
 		printf '\n'; \
-		sed '1s/^# Architecture Decision Records$/## Architecture Decision Records/' "$toc_tmp"; \
-	} >"$candidate_tmp"; \
-	if ! cmp -s "$candidate_tmp" "$(ADR_INDEX_FILE)"; then \
-		mv "$candidate_tmp" "$(ADR_INDEX_FILE)"; \
+		sed '1s/^# Architecture Decision Records$$/## Architecture Decision Records/' "$$toc_tmp"; \
+	} >"$$candidate_tmp"; \
+	if ! cmp -s "$$candidate_tmp" "$(ADR_INDEX_FILE)"; then \
+		mv "$$candidate_tmp" "$(ADR_INDEX_FILE)"; \
 	fi; \
 	trap - EXIT; \
-	rm -f "$prefix_tmp" "$toc_tmp" "$candidate_tmp"
+	rm -f "$$prefix_tmp" "$$toc_tmp" "$$candidate_tmp"
 
 build: $(SOURCE_SCRIPT)
 	@test -r "$(BASHLOG)" || { \
