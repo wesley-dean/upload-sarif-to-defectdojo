@@ -42,6 +42,18 @@ title syntax with repository-owned shell logic.
 
 See [ADR-004](ADR-004-reviewed-conventional-release-classification.md).
 
+### ADR-005: Adopt bashdeps-Managed Embedded bashlog
+
+Repository dependencies are prepared through a pinned, digest-verified
+`bashdeps` bootstrap and a committed `dependencies.txt` manifest.  The
+`bashlog` release artifact is a build input, not a runtime sidecar: the public
+root executable embeds verified bashlog bytes so the existing one-file download
+contract remains intact.  Prepared dependency state is generated under
+`vendor/`; dependency convergence may use the network, while verification,
+building, and ordinary tests remain offline.
+
+See [ADR-005](ADR-005-adopt-bashdeps-managed-embedded-bashlog.md).
+
 <!-- adrctl-generated-footer -->
 
 ## Architecture Decision Records
@@ -50,3 +62,4 @@ See [ADR-004](ADR-004-reviewed-conventional-release-classification.md).
 - [ADR-002: Define Runtime and Testing Contract](ADR-002-define-runtime-and-testing-contract.md)
 - [ADR-003: Treat Configuration Files as Trusted Executable Input](ADR-003-trusted-executable-configuration.md)
 - [ADR-004: Govern Release Classification Through Reviewed Conventional Titles](ADR-004-reviewed-conventional-release-classification.md)
+- [ADR-005: Adopt bashdeps-Managed Embedded bashlog](ADR-005-adopt-bashdeps-managed-embedded-bashlog.md)
