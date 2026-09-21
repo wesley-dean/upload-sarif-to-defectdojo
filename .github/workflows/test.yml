@@ -29,9 +29,7 @@ jobs:
         run: make deps-check
 
       - name: Build distribution artifacts
-        run: |
-          make build
-          git diff --exit-code -- upload_sarif_to_defectdojo.bash
+        run: make build
 
       - name: Verify distribution artifact contract
         shell: bash
@@ -70,14 +68,6 @@ jobs:
             exit 1
           fi
 
-          normalized="${RUNNER_TEMP}/compat-normalized.bash"
-          sed \
-            -e 's/^UPLOAD_SARIF_VERSION=.*/UPLOAD_SARIF_VERSION=0.0.0-dev/' \
-            -e 's/^UPLOAD_SARIF_BUILD_DATE=.*/UPLOAD_SARIF_BUILD_DATE=unknown/' \
-            -e 's/^UPLOAD_SARIF_BUILD_COMMIT=.*/UPLOAD_SARIF_BUILD_COMMIT=unknown/' \
-            dist/upload_sarif_to_defectdojo.bash >"${normalized}"
-          cmp "${normalized}" upload_sarif_to_defectdojo.bash
-
           dist/upload_sarif_to_defectdojo.dev.bash --help >"${RUNNER_TEMP}/help.dev"
           dist/upload_sarif_to_defectdojo.bash --help >"${RUNNER_TEMP}/help.ordinary"
           dist/upload_sarif_to_defectdojo.min.bash --help >"${RUNNER_TEMP}/help.min"
@@ -93,7 +83,7 @@ jobs:
           for artifact in dist/*.bash dist/*.bash.sha256; do
             cmp "${RUNNER_TEMP}/first-build/$(basename "${artifact}")" "${artifact}"
           done
-          git diff --exit-code -- upload_sarif_to_defectdojo.bash
+          :
 
       - name: Verify ADR landing page generation
         shell: bash
@@ -162,6 +152,18 @@ jobs:
             dist/upload_sarif_to_defectdojo.min.bash
             dist/upload_sarif_to_defectdojo.min.bash.sha256
           if-no-files-found: error
+
+      - name: Verify committed compatibility artifact
+        shell: bash
+        run: |
+          normalized="${RUNNER_TEMP}/compat-normalized.bash"
+          sed \
+            -e 's/^UPLOAD_SARIF_VERSION=.*/UPLOAD_SARIF_VERSION=0.0.0-dev/' \
+            -e 's/^UPLOAD_SARIF_BUILD_DATE=.*/UPLOAD_SARIF_BUILD_DATE=unknown/' \
+            -e 's/^UPLOAD_SARIF_BUILD_COMMIT=.*/UPLOAD_SARIF_BUILD_COMMIT=unknown/' \
+            dist/upload_sarif_to_defectdojo.bash >"${normalized}"
+          cmp "${normalized}" upload_sarif_to_defectdojo.bash
+          git diff --exit-code -- upload_sarif_to_defectdojo.bash
 
   pr-title:
     name: conventional-pr-title
