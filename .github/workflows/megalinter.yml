@@ -44,10 +44,6 @@ env:
   #  pull_request: applies fixes in a new Pull Request
   APPLY_FIXES_MODE: commit
 
-  # If using signed commits, uncomment the following lines:
-  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-  GPG_PRIVATE_KEY_PASSPHRASE: ${{ secrets.GPG_PRIVATE_KEY_PASSPHRASE }}
-
 # If MegaLinter is already running, cancel the previous run
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
@@ -105,8 +101,8 @@ jobs:
           && (github.event_name == 'push'
             || github.event.pull_request.head.repo.full_name == github.repository)
         with:
-          gpg_private_key: ${{ env.GPG_PRIVATE_KEY }}
-          passphrase: ${{ env.GPG_PRIVATE_KEY_PASSPHRASE }}
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASSPHRASE }}
           git_user_signingkey: true
           git_commit_gpgsign: true
 
