@@ -816,4 +816,6 @@ main() {
 }
 
 # if we're not being sourced and there's a function named `main`, run it
-[[ "$0" == "${BASH_SOURCE[0]}" ]] && [ "$(type -t "main")" = "function" ] && main "$@"
+if [[ "$0" == "${BASH_SOURCE[0]}" ]] && [ "$(type -t "main")" = "function" ]; then
+  main "$@"
+fi
