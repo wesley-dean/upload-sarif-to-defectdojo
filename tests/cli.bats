@@ -13,6 +13,8 @@ teardown() { teardown_common; }
   [ "$status" -eq 0 ]
   [[ "$output" == *"Overview"* ]]
   [[ "$output" == *"Usage:"* ]]
+  [[ "$output" == *"file's repo's .uploadsarifdd.conf"* ]]
+  [[ "$output" != *".uploadsarif.dd.conf"* ]]
 }
 
 @test "explicitly missing file fails" {
