@@ -29,19 +29,19 @@ The script can be...
 ## Overview
 
 This is a shell script that will iterate across a series of filenames
-passed in and upload the results to a DefectDojo instance.  This
-hope is to have one process generate SARIF results (e.g.,
-[Megalinter](https://megalinter.io/))
+passed in and upload the results to a DefectDojo instance.  The
+goal is to have one process generate SARIF results (e.g.,
+[MegaLinter](https://megalinter.io/))
 so that this script can upload the results.  The original intent of
 this script was to upload SARIF-formatted reports produced by
-[Megalinter](https://megalinter.io/), but it can work with any
+[MegaLinter](https://megalinter.io/), but it can work with any
 tool that produces SARIF output (e.g., `semgrep --sarif`).
 
 There exist actions in the GitHub Actions Marketplace that will
 upload SARIF results to DefectDojo, such as:
 [defectdojo-import-scan](https://github.com/marketplace/actions/defectdojo-import-scan)
 
-However, we want to be able to be able to upload results to
+However, we want to be able to upload results to
 an internal, non-Internet-accessible DefectDojo instance, potentially
 using an internal CI/CD system (e.g., a Jenkins instance).
 
@@ -73,8 +73,7 @@ first one found being used:
 5. ~/uploadsarifdd.conf
 6. ~/.uploadsarifdd.conf
 
-Future plans may include specifying the configuration via
-CLI flag, supporting additional scan types, and/or additional
+Future plans may include supporting additional scan types and/or additional
 fields from DefectDojo's import-scan endpoint.
 
 
@@ -121,8 +120,8 @@ has been provided to simplify running it.
 ### Building the Image
 
 ```bash
-docker build
-  -t ghcr.io/wesley-dean/upload-sarif-to-defectdojo
+docker build \
+  -t ghcr.io/wesley-dean/upload-sarif-to-defectdojo \
   .
 ```
 
@@ -134,7 +133,7 @@ docker run \
   -it -v "$PWD:$PWD" \
   -w "$PWD" \
   -u "$UID" \
-  ghrc.io/wesley-dean/upload-sarif-to-defectdojo \
+  ghcr.io/wesley-dean/upload-sarif-to-defectdojo \
   megalinter-reports/sarif/*.sarif
 ```
 
@@ -142,11 +141,11 @@ docker run \
 
 ### DD_TOKEN
 
-`DD_TOKEN` is authentication token for interacting with DefectDojo (required).
+`DD_TOKEN` is the authentication token for interacting with DefectDojo (required).
 
 **DD_TOKEN is required!!**
 
-The API token may be found throught DefectDojo's web user interface
+The API token may be found through DefectDojo's web user interface
 by going to `<server name>/api/key-v2`
 
 Note: there is no CLI argument to pass the token via the command line as
@@ -155,9 +154,9 @@ it must be passed via environment variable or configuration file.
 
 ### DD_PRODUCT
 
-`DD_PRODUCT` is name of the product in DefectDojo (required)
+`DD_PRODUCT` is the name of the product in DefectDojo (required)
 
-**DD_PRODUCT is required!!***
+**DD_PRODUCT is required!!**
 
 ### DD_ENGAGEMENT
 
@@ -188,7 +187,7 @@ DefectDojo runs at the root of the server (i.e., `dojo.example.com`)
 
 ### DD_SCAN_DATE
 
-`DD_SCAN_DATE` the date the scan took place
+`DD_SCAN_DATE` is the date the scan took place
 
 DefectDojo accepts ISO-8601 dates (but just year, month, and day)
 for when scans took place; the default value is when the file being
@@ -196,9 +195,9 @@ uploaded was last modified
 
 Set via CLI with `-d` or `--date`
 
-### DD_MINIMUM_SEVERITY (-s)
+### DD_MINIMUM_SEVERITY (-S)
 
-`DD_MINIMUM_SEVERITY` IS minimum severity level to be imported
+`DD_MINIMUM_SEVERITY` is the minimum severity level to be imported
 
 Set via CLI with `-S` or `--severity`.
 
@@ -252,7 +251,7 @@ The default value is 'false'
 
 `DD_FILE_TYPE` is the MIME type for the file to be uploaded
 
-Set via CLI with `-m` or `--mime-type
+Set via CLI with `-m` or `--mime-type`
 
 The default value is determined by the file's extension
 
