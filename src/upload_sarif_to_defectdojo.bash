@@ -6,15 +6,15 @@
 ## @brief a shell script to automate uploading SARIF results to DefectDojo
 ## @details
 ## This is a shell script that will iterate across a series of filenames
-## passed in and upload the results to a DefectDojo instance.  This
-## hope is to have one process generate SARIF results (e.g., Megalinter)
+## passed in and upload the results to a DefectDojo instance.  The
+## goal is to have one process generate SARIF results (e.g., MegaLinter)
 ## so that this script can upload the results.
 ##
 ## There exist actions in the GitHub Actions Marketplace that will
 ## upload SARIF results to DefectDojo, such as:
 ## https://github.com/marketplace/actions/defectdojo-import-scan
 ##
-## However, we want to be able to be able to upload results to
+## However, we want to be able to upload results to
 ## an internal, non-Internet-accessible DefectDojo instance, potentially
 ## using an internal CI/CD system (e.g., a Jenkins instance).
 ##
@@ -42,7 +42,7 @@
 ## 1. current directory's uploadsarifdd.conf
 ## 2. current directory's .uploadsarifdd.conf
 ## 3. file's repo's uploadsarifdd.conf
-## 4. file's repo's .uploadsarif.dd.conf
+## 4. file's repo's .uploadsarifdd.conf
 ## 5. ~/uploadsarifdd.conf
 ## 6. ~/.uploadsarifdd.conf
 
@@ -50,7 +50,7 @@ set -euo pipefail
 
 ## @var UPLOAD_SARIF_USAGE_OVERVIEW
 ## @brief Stable overview text used by every generated artifact flavor.
-readonly UPLOAD_SARIF_USAGE_OVERVIEW=":file src/upload_sarif_to_defectdojo.bash\nauthor: CQPFC Team\n:brief a shell script to automate uploading SARIF results to DefectDojo\n:details\n This is a shell script that will iterate across a series of filenames\n passed in and upload the results to a DefectDojo instance.  This\n hope is to have one process generate SARIF results (e.g., Megalinter)\n so that this script can upload the results.\n\n There exist actions in the GitHub Actions Marketplace that will\n upload SARIF results to DefectDojo, such as:\n https://github.com/marketplace/actions/defectdojo-import-scan\n\n However, we want to be able to be able to upload results to\n an internal, non-Internet-accessible DefectDojo instance, potentially\n using an internal CI/CD system (e.g., a Jenkins instance).\n\n Configuration for the tool is expected to be provided by environment\n variables; this is to support clean integration with a CI/CD\n system that populates environment variables rather than using\n flags.  Additionally, the tool is able to use a configuration\n file (e.g., \`.env\`) that can provide values.\n\n The expected usage pattern is for a repository to include a\n configuration file with parameters like project name, whether\n or not to push results to Jira, etc. and environment variables to\n pass server details and authentication credentials.  It's possible\n to use all environment variables or all configuration files or\n some mix.\n\n The script supports passing multiple files to be uploaded, even\n if those files are in different locations or even associated with\n different projects. In situations like these, a configuration\n file for each location is supported.\n\n Several locations for configuration files are searched with the\n first one found being used:\n\n 1. current directory's uploadsarifdd.conf\n 2. current directory's .uploadsarifdd.conf\n 3. file's repo's uploadsarifdd.conf\n 4. file's repo's .uploadsarif.dd.conf\n 5. ~/uploadsarifdd.conf\n 6. ~/.uploadsarifdd.conf"
+readonly UPLOAD_SARIF_USAGE_OVERVIEW=":file src/upload_sarif_to_defectdojo.bash\nauthor: CQPFC Team\n:brief a shell script to automate uploading SARIF results to DefectDojo\n:details\n This is a shell script that will iterate across a series of filenames\n passed in and upload the results to a DefectDojo instance.  The\n goal is to have one process generate SARIF results (e.g., MegaLinter)\n so that this script can upload the results.\n\n There exist actions in the GitHub Actions Marketplace that will\n upload SARIF results to DefectDojo, such as:\n https://github.com/marketplace/actions/defectdojo-import-scan\n\n However, we want to be able to upload results to\n an internal, non-Internet-accessible DefectDojo instance, potentially\n using an internal CI/CD system (e.g., a Jenkins instance).\n\n Configuration for the tool is expected to be provided by environment\n variables; this is to support clean integration with a CI/CD\n system that populates environment variables rather than using\n flags.  Additionally, the tool is able to use a configuration\n file (e.g., \`.env\`) that can provide values.\n\n The expected usage pattern is for a repository to include a\n configuration file with parameters like project name, whether\n or not to push results to Jira, etc. and environment variables to\n pass server details and authentication credentials.  It's possible\n to use all environment variables or all configuration files or\n some mix.\n\n The script supports passing multiple files to be uploaded, even\n if those files are in different locations or even associated with\n different projects. In situations like these, a configuration\n file for each location is supported.\n\n Several locations for configuration files are searched with the\n first one found being used:\n\n 1. current directory's uploadsarifdd.conf\n 2. current directory's .uploadsarifdd.conf\n 3. file's repo's uploadsarifdd.conf\n 4. file's repo's .uploadsarifdd.conf\n 5. ~/uploadsarifdd.conf\n 6. ~/.uploadsarifdd.conf"
 
 ## @var UPLOAD_SARIF_USAGE_TEXT
 ## @brief Stable option text used by every generated artifact flavor.
