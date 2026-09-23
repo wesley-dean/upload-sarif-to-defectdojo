@@ -189,7 +189,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # pin@v4
 
       - name: Build image
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # pin@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # pin@v6
         with:
           context: .
           push: false
