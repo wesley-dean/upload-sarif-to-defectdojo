@@ -322,3 +322,14 @@ Release significance is a reviewed project decision.
 External metadata may inform that decision.  It does not make the decision.
 
 The pull request and the commit placed on the release branch MUST communicate the highest semantic significance of the complete change in a form that the repository's release tooling recognizes.
+
+
+## Related Templates
+
+The non-normative
+[Conventional Commit Message Reference](../templates/git/commit-message.md) and
+[Squash or Merge Message Reference](../templates/git/merge-message.md) provide
+reusable structures for applying this governance.
+
+They are Markdown references for humans and automated agents.  Their presence does
+not configure Git or repository merge settings.

@@ -194,3 +194,10 @@ Before merging a pull request that adds or changes ADR governance, verify:
 ## Governing Principle
 
 An ADR records an accepted decision and remains part of the repository's decision history.  Later decisions may change what governs now, but they do not erase the fact that an earlier decision was accepted.  Keep acceptance in the status field, keep evolution in the narrative, keep current governance in `doc/adr/README.md`, and keep the complete historical corpus discoverable beneath the same landing page.
+
+
+## Related Template
+
+The non-normative [ADR template](../templates/adr/adr.md) provides a reusable
+Markdown structure for applying this standard.  The template does not replace the
+requirements in this document.
