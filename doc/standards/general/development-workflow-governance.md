@@ -30,6 +30,8 @@ This policy is intended to:
 - use small, focused commits as understandable review units;
 - collect related commits into cohesive, easily reviewed pull requests;
 - make pull request readiness an explicit project signal;
+- allow hosting-platform auto-merge to perform the mechanical merge after all
+  required review, CI, branch-protection, and other repository gates succeed;
 - avoid stacked pull requests in repositories that use squash merging;
 - give humans and automated coding agents the same expectations for scope control;
   and
@@ -170,6 +172,78 @@ The size of a change is not the deciding factor.  A one-line unrelated cleanup m
 still be out of scope, while a larger supporting change may be necessary to fulfill
 the active task correctly.
 
+## Branch Naming
+
+Repositories adopting this standard SHOULD use a purpose-oriented branch name
+that communicates the kind of work being performed without requiring an issue
+number.
+
+Human-created development branches SHOULD use:
+
+```text
+<type>/<description>
+```
+
+Agent-created branches SHOULD prefer the vendor-neutral provenance namespace:
+
+```text
+agent/<type>/<description>
+```
+
+The `ai/` and `codex/` namespaces MAY be accepted for compatibility with
+existing automation and agent workflows:
+
+```text
+ai/<type>/<description>
+codex/<type>/<description>
+```
+
+The purpose type SHOULD align with the repository's Conventional Commit
+vocabulary.  Common types include:
+
+```text
+feat
+fix
+docs
+test
+refactor
+perf
+build
+ci
+chore
+revert
+style
+```
+
+Descriptions SHOULD use lowercase words separated by hyphens.  Branch names
+SHOULD avoid spaces, underscores, unnecessary punctuation, and issue numbers
+used only to satisfy a naming template.
+
+Examples include:
+
+```text
+feat/add-manifest-validation
+fix/reject-empty-owner
+agent/docs/update-security-guidance
+agent/chore/refresh-release-tooling
+ai/test/add-cache-regression-coverage
+codex/refactor/split-parser-stages
+```
+
+Branch classification is descriptive development metadata.  It MUST NOT be
+treated as proof of authorship, authorization, or release significance.
+Security-sensitive automation MUST independently verify the properties on
+which it relies.
+
+Issue numbers SHALL NOT be required in branch names.  Issue linkage MAY be
+preserved in pull requests, commit messages, or other reviewable metadata.
+
+Branch creation SHOULD occur when work begins rather than automatically when an
+issue is opened.  Existing branches are not required to be renamed solely to
+match this convention.
+
+See ADR-011 for the decision context, alternatives, compatibility implications,
+and relationship to Conventional Commit release governance.
 ## Backlog Issues
 
 A backlog issue SHOULD contain enough information for another contributor to
@@ -259,6 +333,46 @@ implementation belongs on the draft pull request, issue, or other project channe
 If substantive new work makes a Ready pull request incomplete again, the pull
 request SHOULD return to draft status when the hosting platform and permissions
 permit it.
+
+## Automatic Merge After Review
+
+When a pull request is Ready for review, is intended for normal integration, and
+the hosting platform and repository permit auto-merge, automated coding agents
+SHOULD enable auto-merge.
+
+Enabling auto-merge delegates only the mechanical merge operation to the hosting
+platform.  It MUST NOT be treated as approval, as a substitute for human review,
+or as permission to bypass required CI, CODEOWNERS approval, branch protection,
+rulesets, security review, or any other repository gate.
+
+Auto-merge is appropriate when all of the following are true:
+
+- the pull request is Ready for review;
+- the requested work is complete for the intended scope;
+- the pull request is expected to merge once ordinary repository gates succeed;
+- no additional maintainer decision is known to be required beyond those gates;
+  and
+- the hosting platform will enforce the repository's normal merge requirements
+  before completing the merge.
+
+An automated agent SHOULD NOT enable auto-merge when:
+
+- the pull request remains a draft;
+- the maintainer has requested manual merge control;
+- unresolved architectural, security, compatibility, release, or scope questions
+  require an explicit decision before merge;
+- required merge gates are not understood or cannot be verified to remain in
+  force; or
+- auto-merge would weaken, bypass, or obscure an intended human authorization
+  boundary.
+
+A required CODEOWNERS review is compatible with auto-merge.  In that model, the
+CODEOWNERS approval remains the human authorization gate, while the hosting
+platform performs the merge only after that approval and all other required
+conditions have been satisfied.
+
+When an agent enables auto-merge, it SHOULD preserve the repository's normal merge
+strategy and reviewed commit-title or release-classification requirements.
 
 ## Squash Merges
 
@@ -379,20 +493,23 @@ When working on a repository, an agent SHOULD:
 6. open new pull requests in draft mode;
 7. mark a pull request Ready for review only when it can be reviewed and merged at
    any time once normal repository gates are satisfied;
-8. avoid stacking a pull request on another unmerged pull request;
-9. capture valuable out-of-scope ideas as backlog issues when repository access
-   permits;
-10. link backlog issues to the context in which they were discovered when useful;
-11. ask when a material idea could reasonably belong either to the active task or
-   to the backlog;
-12. prefer the narrower task boundary when clarification is unavailable and the
-   task can be completed correctly without expansion;
-13. follow private security-reporting procedures instead of public issue creation
-   for sensitive findings;
-14. avoid assuming that a maintainer's hobby project permits lower process
-   discipline; and
-15. preserve enough written context that another contributor or later agent can
-   understand why work was included, deferred, or separated.
+8. enable hosting-platform auto-merge for a Ready pull request when repository
+   policy permits it and no additional human decision is required beyond the
+   repository's normal merge gates;
+9. avoid stacking a pull request on another unmerged pull request;
+10. capture valuable out-of-scope ideas as backlog issues when repository access
+    permits;
+11. link backlog issues to the context in which they were discovered when useful;
+12. ask when a material idea could reasonably belong either to the active task or
+    to the backlog;
+13. prefer the narrower task boundary when clarification is unavailable and the
+    task can be completed correctly without expansion;
+14. follow private security-reporting procedures instead of public issue creation
+    for sensitive findings;
+15. avoid assuming that a maintainer's hobby project permits lower process
+    discipline; and
+16. preserve enough written context that another contributor or later agent can
+    understand why work was included, deferred, or separated.
 
 An agent MUST NOT treat autonomy as permission to expand scope silently.
 
@@ -501,7 +618,9 @@ verify that:
 - architectural decisions were not smuggled into implementation without required
   governance; and
 - Ready-for-review status accurately means the pull request can be reviewed and
-  merged once normal repository gates are satisfied.
+  merged once normal repository gates are satisfied; and
+- auto-merge, when enabled, leaves every required review, CI, branch-protection,
+  CODEOWNERS, security, and other merge gate in force.
 
 ## Repository Adoption
 
@@ -519,10 +638,12 @@ A repository adopting this policy SHOULD:
 7. collect related commits into cohesive pull requests;
 8. open pull requests in draft mode and use Ready for review as the explicit
    review-and-merge signal;
-9. use squash merges unless repository-specific governance says otherwise;
-10. avoid stacked pull requests and branch new work from the normal integration
+9. permit hosting-platform auto-merge when it preserves all required repository
+   gates and no additional manual merge decision is intended;
+10. use squash merges unless repository-specific governance says otherwise;
+11. avoid stacked pull requests and branch new work from the normal integration
     branch; and
-11. treat backlog hygiene as normal engineering work rather than optional project
+12. treat backlog hygiene as normal engineering work rather than optional project
     administration.
 
 Repository-specific governance MAY define additional triage states, issue labels,
@@ -545,3 +666,17 @@ or silently expanding scope.  When the boundary is materially uncertain, ask.
 
 Professional engineering discipline is valuable even when the entire team is one
 person.
+
+
+## Related Templates
+
+The non-normative repository templates provide reusable structures for work
+governed by this document:
+
+- [Pull Request](../templates/repository/github/pull-request.md)
+- [Bug Report](../templates/repository/github/bug-report.md)
+- [Feature Request](../templates/repository/github/feature-request.md)
+- [General Issue](../templates/repository/github/general-issue.md)
+
+Repositories may adapt these references through ordinary reviewed changes.
+Standards adoption does not install them into active repository locations.

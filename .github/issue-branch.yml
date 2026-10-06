@@ -1,8 +1,0 @@
----
-mode: immediate
-autoLinkIssue: true
-autoCloseIssue: true
-autoDeleteBranch: true
-conventionalPrTitles: true
-branchName: '${issue.number}-${issue.title}'
-openDraftPR: true
