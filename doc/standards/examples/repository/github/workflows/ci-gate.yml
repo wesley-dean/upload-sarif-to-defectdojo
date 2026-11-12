@@ -1,0 +1,34 @@
+---
+# Non-normative reference example; copy through a reviewed local change.
+# PR-head ref below is suitable for branch-push test checks. Review mixed
+# push/PR event and fork semantics before using as an authoritative gate.
+name: CI check gate
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  checks: read
+
+jobs:
+  aggregate:
+    name: test-gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      checks: read
+    steps:
+      - name: Wait for observed standardized CI checks
+        uses: matiasalbarello/wait-on-check-action-ts@8087812521cdb59ebc7751984b31b17209b30eeb # v1.2.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repo-token: ${{ github.token }}
+          check-regexp: '^(test|e2e|end-to-end|integration|lint|security|build|compat)(-.+)?$'
+          running-workflow-name: test-gate
+          allowed-conclusions: success,skipped,cancelled
+          fail-on-no-checks: 'false'
+          wait-interval: '10'

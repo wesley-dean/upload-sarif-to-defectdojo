@@ -244,6 +244,19 @@ match this convention.
 
 See ADR-011 for the decision context, alternatives, compatibility implications,
 and relationship to Conventional Commit release governance.
+## Opt-In Three-Phase Development
+
+Repositories MAY explicitly adopt the companion
+[Opt-In Three-Phase Development Governance](three-phase-development-governance.md)
+standard by setting `three_phase_development = true` in the repository-root
+`.codingstandardrc`.  This adds separate Product Owner and Technical Architect
+approval gates, issue-based story/task traceability, and a defined task queue.
+Absent or `false` settings preserve the baseline workflow described here.
+Standards upgrades MUST NOT silently change an existing repository's explicit
+selection.  The optional profile's more specific requirements govern where
+it has been deliberately enabled, without weakening this document's core
+scope, security, or review requirements.
+
 ## Backlog Issues
 
 A backlog issue SHOULD contain enough information for another contributor to
@@ -308,71 +321,104 @@ work.
 
 ## Draft and Ready-for-Review Lifecycle
 
-New pull requests SHOULD be opened in draft mode.
+New pull requests SHOULD be opened in draft mode. Draft status indicates
+author-controlled implementation, documentation, verification, cleanup, or
+review remains unfinished. A draft PR is not a request for final review.
 
-Draft status communicates that implementation, verification, documentation,
-cleanup, or author review may still be in progress.  A draft pull request MAY be
-read, discussed, or inspected, but reviewers and maintainers SHOULD NOT interpret
-its existence as a request to perform final review or merge it.
+### Handoff after the final planned commit
 
-Transitioning a pull request from Draft to Ready for review is an explicit project
-signal.  Once marked Ready for review, the author is declaring that:
+An automated coding agent MUST promptly mark a PR Ready for review when:
 
-- the requested work is complete for the intended scope;
-- the pull request description accurately represents the change;
-- required verification has been performed to the extent available;
-- known relevant documentation has been updated;
-- the pull request is ready for normal review; and
-- the pull request may be merged at any time once repository checks, review
-  requirements, and other merge gates are satisfied.
+- all currently planned changes within the authorized scope, including
+  necessary tests and documentation, are committed and pushed;
+- no further implementation commits are presently expected;
+- author-side verification has been performed to the extent practical, with
+  results, omissions, and limitations accurately disclosed;
+- the PR title, description, issue links, and material risks represent
+  the current diff; and
+- no unresolved material architecture, scope, security, compatibility, or
+  release decision prevents final review.
 
-A pull request SHOULD NOT be marked Ready for review merely to solicit preliminary
-feedback while substantial known implementation work remains.  Discussion during
-implementation belongs on the draft pull request, issue, or other project channel.
+When those conditions hold, the agent MUST make the transition before
+ending its implementation handoff. Neither a possibility of later,
+unanticipated corrective commits nor pending/running CI checks is a reason
+to leave the PR in Draft. The agent MUST NOT wait solely for CI completion
+before marking the PR Ready.
 
-If substantive new work makes a Ready pull request incomplete again, the pull
-request SHOULD return to draft status when the hosting platform and permissions
-permit it.
+Ready communicates that the author has finished planned work and is asking
+for human review. It does not establish that CI has passed, that merge is
+authorized, or that a technical task or story has satisfied its separate
+Definition of Done.
+
+A known failing check the agent is actively fixing, or other substantial
+known work requiring another planned commit, means author-side work remains
+unfinished. The PR SHOULD remain Draft while that work continues. A failed
+or missing required check MUST NOT be reported as passed or bypassed.
+
+### Later corrections
+
+A CI failure or review finding discovered after handoff does not automatically
+invalidate a valid Ready transition. Narrow corrective commits MAY be made
+while Ready if the PR remains accurate and reviewable. If substantial work
+resumes or a material decision reopens, the agent SHOULD return the PR
+to Draft when platform permissions allow it. Repository stale-approval and
+most-recent-reviewable-push rules MUST continue to apply. Agents MUST NOT
+bypass or presume that those protections exist.
+
+### Verified handoff
+
+Before ending an implementation session, the agent MUST inspect and report
+the PR URL, its actual Draft/Ready state, whether auto-merge was successfully
+armed, and the known verification state, including pending, failing, or
+unavailable checks. A forbidden, failed, unsupported, or unsafe transition
+MUST be reported explicitly rather than silently skipped. An agent MUST NOT
+claim unobserved CI success or promise future monitoring without an
+actual monitoring mechanism.
 
 ## Automatic Merge After Review
 
-When a pull request is Ready for review, is intended for normal integration, and
-the hosting platform and repository permit auto-merge, automated coding agents
-SHOULD enable auto-merge.
+After an agent-authored PR is Ready for review, the agent MUST enable
+auto-merge when the hosting platform supports it, the repository permits
+it, all required review and validation gates are verified to remain
+enforced, and no separate manual-merge decision or material blocker applies.
+Pending or running CI alone MUST NOT delay this action when those checks
+remain required conditions for merge.
 
-Enabling auto-merge delegates only the mechanical merge operation to the hosting
-platform.  It MUST NOT be treated as approval, as a substitute for human review,
-or as permission to bypass required CI, CODEOWNERS approval, branch protection,
-rulesets, security review, or any other repository gate.
+Auto-merge delegates only the mechanical merge operation to the platform.
+It MUST NOT constitute approval or bypass CI, CODEOWNERS approval, branch
+protection, rulesets, security review, or any other required gate.
 
-Auto-merge is appropriate when all of the following are true:
+Auto-merge is appropriate only when:
 
-- the pull request is Ready for review;
-- the requested work is complete for the intended scope;
-- the pull request is expected to merge once ordinary repository gates succeed;
-- no additional maintainer decision is known to be required beyond those gates;
+- the PR is Ready and currently planned author work is complete;
+- all required checks and reviews will remain enforced before merge;
+- the PR is intended for ordinary integration after those gates succeed;
+- no additional human decision is required beyond those configured gates;
   and
-- the hosting platform will enforce the repository's normal merge requirements
-  before completing the merge.
+- the normal merge strategy and reviewed semantic classification are preserved.
 
-An automated agent SHOULD NOT enable auto-merge when:
+An automated agent MUST NOT enable auto-merge when:
 
-- the pull request remains a draft;
-- the maintainer has requested manual merge control;
-- unresolved architectural, security, compatibility, release, or scope questions
-  require an explicit decision before merge;
-- required merge gates are not understood or cannot be verified to remain in
-  force; or
-- auto-merge would weaken, bypass, or obscure an intended human authorization
-  boundary.
+- the PR is still Draft or known implementation work remains incomplete;
+- the maintainer has requested a separate manual merge;
+- unresolved architecture, security, compatibility, release, or scope questions
+  require a decision;
+- required merge gates are unknown or cannot be verified to remain in force;
+- human approval is expected but not enforced, so the PR could merge before
+  that human review; or
+- auto-merge would weaken, bypass, or obscure an authorization boundary.
 
-A required CODEOWNERS review is compatible with auto-merge.  In that model, the
-CODEOWNERS approval remains the human authorization gate, while the hosting
-platform performs the merge only after that approval and all other required
-conditions have been satisfied.
+A required failed check must continue to block merge. CODEOWNERS approval is
+compatible with arming auto-merge before review, because the hosting platform
+continues enforcing that human gate.
 
-When an agent enables auto-merge, it SHOULD preserve the repository's normal merge
-strategy and reviewed commit-title or release-classification requirements.
+If auto-merge is unsupported, forbidden, or unsafe, the agent MUST leave it
+disabled and report why. If requested, the agent MUST verify the platform
+accepted the auto-merge operation and report the actual result.
+
+Repositories SHOULD dismiss stale approvals or require approval of the
+most recent reviewable push so corrective commits cannot silently evade
+human review. Agents MUST obey the protections actually configured.
 
 ## Squash Merges
 
@@ -583,9 +629,11 @@ An agent has implemented most of a task but still needs to finish tests and upda
 usage documentation.  The pull request may remain open in draft mode so its work
 is visible and discussion can occur.
 
-Once the implementation, verification, and documentation are complete, the agent
-marks the pull request Ready for review.  That transition means a maintainer may
-review and merge it whenever the repository's normal gates permit.
+Once the agent has pushed the last planned implementation, test, and
+documentation changes, it marks the PR Ready even if CI is still pending.
+It enables auto-merge if the repository's required review and CI gates
+can be verified as enforced. The maintainer can review immediately; the
+platform waits for every required condition before merging.
 
 ### Security Finding
 
@@ -617,10 +665,13 @@ verify that:
 - security-sensitive findings were handled through the appropriate process;
 - architectural decisions were not smuggled into implementation without required
   governance; and
-- Ready-for-review status accurately means the pull request can be reviewed and
-  merged once normal repository gates are satisfied; and
-- auto-merge, when enabled, leaves every required review, CI, branch-protection,
-  CODEOWNERS, security, and other merge gate in force.
+- agent-authored PRs move from Draft to Ready after final planned commits,
+  without waiting solely for pending CI;
+- passing, pending, failing, and unavailable checks are reported accurately;
+- auto-merge is verifiably armed when safe or a specific blocker is reported;
+  and
+- auto-merge preserves every required CI, CODEOWNERS, security, review, and
+  other merge gate.
 
 ## Repository Adoption
 
@@ -669,6 +720,11 @@ person.
 
 
 ## Related Templates
+
+When the optional three-phase profile is enabled, its non-normative
+[User Story](../templates/repository/github/user-story.md) and
+[Technical Task](../templates/repository/github/technical-task.md) templates
+provide reference issue structures.
 
 The non-normative repository templates provide reusable structures for work
 governed by this document:

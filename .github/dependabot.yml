@@ -16,8 +16,8 @@ updates:
       prefix-development: chore
       include: scope
     groups:
-      minor-and-patch:
+      # Routine major/minor/patch versions; security updates stay independent.
+      actions-version-updates:
         applies-to: version-updates
-        update-types:
-          - "minor"
-          - "patch"
+        patterns:
+          - "*"

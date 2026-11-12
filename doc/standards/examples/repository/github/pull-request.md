@@ -30,10 +30,11 @@ merely because the build step completed successfully.
 
 ## Verification
 
-- [x] Relevant automated tests pass.
-- [x] Generated or distributed artifacts were verified where applicable.
-- [x] Documentation affected by this change was updated.
-- [x] Governing ADRs and standards affected by this change were reviewed.
+- [x] Local archive structure and checksum verification passed.
+- [x] CI is still pending; no CI pass is claimed yet.
+- [x] Generated archive locally verified against the documented contract.
+- [x] Documentation affected by this change updated.
+- [x] Governing ADRs and standards affected by this change reviewed.
 
 ## Known Limitations and Follow-Up
 
@@ -46,7 +47,8 @@ artifact signing; that remains separate scope.
 - [x] The pull request title reflects the highest semantic significance of the
   complete change.
 - [x] The diff remains within the declared scope.
-- [x] Required verification has been completed to the extent available.
+- [x] Available author-side verification completed and honestly reported.
 - [x] Material assumptions, limitations, and risks are visible.
-- [x] The pull request is ready for normal review and may be merged once repository
-  checks and review requirements are satisfied.
+- [x] Final planned commits pushed; no further implementation is expected.
+- [x] PR marked Ready while CI remains pending.
+- [x] Auto-merge armed; protected CI and human review gate merge.

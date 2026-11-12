@@ -418,6 +418,18 @@ An explicit `--config` / `-c` path is considered before automatic discovery.
 If explicit configuration paths are supplied and none is readable, the command
 fails instead of silently selecting a different discovered file.
 
+## Dependabot Maintenance
+
+Routine GitHub Actions dependency version updates remain weekly with a
+seven-day cooldown, grouping eligible major, minor, and patch changes under
+`actions-version-updates`. Security updates remain independent. Groups
+containing major upgrades require targeted manual review and remain
+excluded from the existing non-major-only auto-merge route. Existing
+Dependabot PRs are not automatically superseded. This change does not
+modify the executable Bash configuration trust boundary, DefectDojo API
+permissions, or the published artifact contracts. See
+[ADR-009](doc/adr/ADR-009-consolidate-github-actions-dependabot-maintenance.md).
+
 ## Security Note
 
 Configuration files are sourced as executable shell code. This means that
