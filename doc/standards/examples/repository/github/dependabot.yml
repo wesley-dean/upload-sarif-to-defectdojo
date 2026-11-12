@@ -1,0 +1,24 @@
+# Non-normative GitHub Actions example. Copy to .github/dependabot.yml
+# through a separate reviewed repository change. Add other ecosystems
+# deliberately after reviewing their manifests and CI evidence.
+#
+# Source: standards/general/dependabot-maintenance-standard.md
+---
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      # Routine major, minor, and patch releases in one version-update group.
+      # Security updates use independent repository settings/triggering.
+      actions-version-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"

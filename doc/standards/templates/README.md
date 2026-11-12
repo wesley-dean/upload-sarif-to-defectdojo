@@ -37,7 +37,8 @@ in the completed artifact.
 
 The initial corpus contains:
 
-- `repository/github/` for pull-request and issue templates;
+- `repository/github/` for pull-request, general issue, user-story, and
+  technical-task templates;
 - `general/security/` for security and STRIDE disclosure;
 - `adr/` for Architecture Decision Records; and
 - `git/` for Conventional Commit and merge-message references.

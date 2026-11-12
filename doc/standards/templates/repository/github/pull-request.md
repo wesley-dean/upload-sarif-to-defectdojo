@@ -40,15 +40,17 @@ impact. -->
 
 ## Verification
 
-<!-- Describe the checks actually performed and their results.  Do not claim that
-a check, build, test, or review was completed unless it was actually performed.
-Include generated-artifact verification when generated or distributed artifacts
-are part of the public contract. -->
+<!-- Report checks actually performed and their results. Distinguish completed
+author-side verification from pending, failed, or unavailable platform CI.
+Pending CI does not delay Ready after the final currently planned commit.
+Never claim that an unobserved check, build, test, or review passed.
+Include generated-artifact verification when it is part of the contract. -->
 
-- [ ] Relevant automated tests pass.
-- [ ] Generated or distributed artifacts were verified where applicable.
-- [ ] Documentation affected by this change was updated.
-- [ ] Governing ADRs and standards affected by this change were reviewed.
+- [ ] Author-side verification performed and reported accurately.
+- [ ] Pending, failed, or unavailable CI checks identified explicitly.
+- [ ] Generated or distributed artifacts verified where applicable.
+- [ ] Documentation affected by this change updated.
+- [ ] Governing ADRs and standards affected by this change reviewed.
 
 ## Known Limitations and Follow-Up
 
@@ -57,14 +59,17 @@ backlog items.  Remove this section when there is nothing material to disclose. 
 
 ## Readiness Checklist
 
-<!-- This checklist represents readiness for final review, not preliminary
-feedback. -->
+<!-- Mark Ready after the last planned commits are pushed and author work is
+complete, even when CI is pending. Enable auto-merge only after verifying
+all required human review and validation gates remain enforced. Report
+any inability to complete the transition or arm auto-merge. -->
 
 - [ ] Related issues are linked where applicable.
 - [ ] The pull request title reflects the highest semantic significance of the
   complete change.
 - [ ] The diff remains within the declared scope.
-- [ ] Required verification has been completed to the extent available.
+- [ ] Available author-side verification completed and honestly reported.
 - [ ] Material assumptions, limitations, and risks are visible.
-- [ ] The pull request is ready for normal review and may be merged once repository
-  checks and review requirements are satisfied.
+- [ ] Final planned commits pushed; no further implementation is expected.
+- [ ] PR marked Ready, without waiting solely for pending CI.
+- [ ] Auto-merge armed under enforced gates, or blocker reported.

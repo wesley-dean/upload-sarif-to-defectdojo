@@ -88,6 +88,16 @@ bytes rather than rebuilding with release-write authority.
 
 See [ADR-008](ADR-008-adopt-three-flavor-distribution-artifacts.md).
 
+### ADR-009: Consolidate GitHub Actions Dependabot Version Updates
+
+Routine GitHub Actions version updates use one weekly wildcard group for
+eligible major, minor, and patch changes with a seven-day cooldown.
+Security updates remain separate and major-containing groups are excluded
+from the existing non-major-only automatic-merge path. Runtime and
+release contracts remain unchanged.
+
+See [ADR-009](ADR-009-consolidate-github-actions-dependabot-maintenance.md).
+
 <!-- adrctl-generated-footer -->
 
 ## Architecture Decision Records
@@ -100,3 +110,4 @@ See [ADR-008](ADR-008-adopt-three-flavor-distribution-artifacts.md).
 * [ADR-006: Use adrctl to Maintain the ADR Inventory](ADR-006-use-adrctl-to-maintain-adr-inventory.md)
 * [ADR-007: Generate Bash Reference Documentation and Publish to Pages](ADR-007-generate-bash-reference-documentation-and-publish-pages.md)
 * [ADR-008: Adopt Three-Flavor Distribution Artifacts](ADR-008-adopt-three-flavor-distribution-artifacts.md)
+* [ADR-009: Consolidate GitHub Actions Dependabot Version Updates](ADR-009-consolidate-github-actions-dependabot-maintenance.md)
