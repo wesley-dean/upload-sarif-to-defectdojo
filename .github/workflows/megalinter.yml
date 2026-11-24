@@ -129,7 +129,7 @@ jobs:
           && env.APPLY_FIXES_MODE == 'pull_request'
           && (github.event_name == 'push'
             || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # pin@v5
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # pin@v5
         with:
           token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           commit-message: "[MegaLinter] Apply linter automatic fixes"
