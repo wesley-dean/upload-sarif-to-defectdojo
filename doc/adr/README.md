@@ -120,3 +120,4 @@ See [ADR-010](ADR-010-migrate-scheduled-dependency-updates-to-renovate.md).
 * [ADR-007: Generate Bash Reference Documentation and Publish to Pages](ADR-007-generate-bash-reference-documentation-and-publish-pages.md)
 * [ADR-008: Adopt Three-Flavor Distribution Artifacts](ADR-008-adopt-three-flavor-distribution-artifacts.md)
 * [ADR-009: Consolidate GitHub Actions Dependabot Version Updates](ADR-009-consolidate-github-actions-dependabot-maintenance.md)
+* [ADR-010: Migrate Scheduled Dependency Updates to Central Renovate](ADR-010-migrate-scheduled-dependency-updates-to-renovate.md)
