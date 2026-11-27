@@ -98,6 +98,15 @@ release contracts remain unchanged.
 
 See [ADR-009](ADR-009-consolidate-github-actions-dependabot-maintenance.md).
 
+### ADR-010: Migrate Scheduled Dependency Updates to Central Renovate
+
+The repository delegates routine version-update scheduling to centrally
+managed Jenkins Renovate, preserving independent GitHub security updates and
+existing dependency-review and release-authority constraints. ADR-009 is
+superseded only for routine Dependabot scheduling and grouping.
+
+See [ADR-010](ADR-010-migrate-scheduled-dependency-updates-to-renovate.md).
+
 <!-- adrctl-generated-footer -->
 
 ## Architecture Decision Records
@@ -111,3 +120,4 @@ See [ADR-009](ADR-009-consolidate-github-actions-dependabot-maintenance.md).
 * [ADR-007: Generate Bash Reference Documentation and Publish to Pages](ADR-007-generate-bash-reference-documentation-and-publish-pages.md)
 * [ADR-008: Adopt Three-Flavor Distribution Artifacts](ADR-008-adopt-three-flavor-distribution-artifacts.md)
 * [ADR-009: Consolidate GitHub Actions Dependabot Version Updates](ADR-009-consolidate-github-actions-dependabot-maintenance.md)
+* [ADR-010: Migrate Scheduled Dependency Updates to Central Renovate](ADR-010-migrate-scheduled-dependency-updates-to-renovate.md)
