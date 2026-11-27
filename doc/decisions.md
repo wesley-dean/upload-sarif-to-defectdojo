@@ -93,3 +93,9 @@ This maintenance policy does not alter executable configuration,
 DefectDojo API behavior, or published release contracts.
 
 See [ADR-009](adr/ADR-009-consolidate-github-actions-dependabot-maintenance.md).
+
+## ADR-010: Migrate Scheduled Dependency Updates to Central Renovate
+
+Routine dependency version updates move from scheduled Dependabot to the centrally managed Jenkins Renovate service. The existing minimal `renovate.json` remains, while Dependabot's scheduled version-update configuration is removed. GitHub security updates and existing review and release-authority boundaries remain independent; ADR-009 is superseded only for scheduled Dependabot cadence and grouping.
+
+See [ADR-010](adr/ADR-010-migrate-scheduled-dependency-updates-to-renovate.md).
